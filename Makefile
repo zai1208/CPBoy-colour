@@ -2,7 +2,7 @@ ifndef CAS_SDK
 $(error You have to define the CAS_SDK variable and point it to the cas-sdk directory!)
 endif
 
-OUTFILE = app0
+OUTFILE = app1
 APPNAME = CPBoy
 APPAUTHOR = diddyholz
 APPVERSION = v0.01
