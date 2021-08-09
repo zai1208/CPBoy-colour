@@ -125,12 +125,13 @@ uint8_t *read_rom_to_ram(const char *file_name)
 {
 	int32_t rom_file = fatOpenFile(file_name, OPEN_READ);
 
-	error_print(file_name);
-
 	if(rom_file < 0)
 		return NULL;
 		
 	int32_t status = fatReadFile(rom_file, rom, sizeof(rom));
+
+	printHexWord(status>>16, 0, 3);
+	printHexWord(status, 5, 3);
 	
 	if(status < 0)
 		return NULL;
