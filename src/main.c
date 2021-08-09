@@ -11,6 +11,9 @@ uint8_t gb_cart_ram_read(struct gb_s *gb, const uint_fast32_t addr);
 void error_print(char *message);
 void gb_error(struct gb_s *gb, const enum gb_error_e gb_err, const uint16_t val);
 void gb_cart_ram_write(struct gb_s *gb, const uint_fast32_t addr, const uint8_t val);
+void lcd_draw_line(struct gb_s *gb, const uint8_t pixels[160], const uint_fast8_t line);
+
+uint8_t rom[MAX_ROM_SIZE];
 
 struct priv_t
 {
@@ -30,7 +33,7 @@ int main()
 		 - implement rtc
 		 - implement keyinput
 	*/
-	char *rom_file_name = "/fls0/apps/gb-emu/rom.gb";
+	const char *rom_file_name = "/fls0/apps/gb-emu/rom.gb";
 
 	enum gb_init_error_e gb_ret;
 	struct gb_s gb;
@@ -118,9 +121,8 @@ void error_print(char *message)
 
 uint8_t *read_rom_to_ram(const char *file_name)
 {
-	int32_t *rom_file = fatOpenFile(file_name, OPEN_READ);
+	int32_t rom_file = fatOpenFile(file_name, OPEN_READ);
 	size_t rom_size;
-	uint8_t rom[MAX_ROM_SIZE];
 
 	if(rom_file < 0)
 		return NULL;
@@ -198,7 +200,7 @@ void gb_error(struct gb_s *gb, const enum gb_error_e gb_err, const uint16_t val)
  * Draws scanline into framebuffer.
  */
 void lcd_draw_line(struct gb_s *gb, const uint8_t pixels[160],
-	const uint_least8_t line)
+	const uint_fast8_t line)
 {
 	struct priv_t *priv = gb->direct.priv;
 
