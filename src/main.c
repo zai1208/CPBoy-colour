@@ -49,7 +49,9 @@ int main()
 
 	fatInitFileAccess();
 
-	if((priv.rom = read_rom_to_ram(rom_file_name)) == NULL)
+	priv.rom = read_rom_to_ram(rom_file_name);
+
+	if(priv.rom == NULL)
 	{
 		error_print("Error while reading ROM");
 		return 1;
@@ -122,7 +124,8 @@ void error_print(char *message)
 uint8_t *read_rom_to_ram(const char *file_name)
 {
 	int32_t rom_file = fatOpenFile(file_name, OPEN_READ);
-	size_t rom_size;
+
+	error_print(file_name);
 
 	if(rom_file < 0)
 		return NULL;
