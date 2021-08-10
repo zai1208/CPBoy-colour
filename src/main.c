@@ -1,3 +1,27 @@
+/**
+ * MIT License
+ *
+ * Copyright (c) 2021 Sidney Krombholz 
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to
+ * deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ */
+
 #include <cas-sdk/display.h>
 #include <cas-sdk/file-system.h>
 #include <cas-sdk/input/key-input.h>
@@ -88,11 +112,11 @@ int main()
 
 	const uint16_t palette[3][4] =
 	{
-		{ 0x7FFF, 0x2BE0, 0x7D00, 0x0000 },
-		{ 0x7FFF, 0x2BE0, 0x7D00, 0x0000 },
-		{ 0x7FFF, 0x2BE0, 0x7D00, 0x0000 }
+		{ 0x7FFF, 0x5294, 0x294A, 0x0000 },
+		{ 0x7FFF, 0x5294, 0x294A, 0x0000 },
+		{ 0x7FFF, 0x5294, 0x294A, 0x0000 }
 	};
-	memcpy(priv.selected_palette, palette, 3 * 4);
+	memcpy(priv.selected_palette, palette, sizeof(palette));
 
 	clearScreen();
 	printf("Init complete", 0, 0, 1);
