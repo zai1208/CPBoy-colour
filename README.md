@@ -7,7 +7,7 @@ Since the CAS has a rather slow processor, a high speed emulator core is mandato
 
 ## Getting Started
 
-The SDK used by the emulator and the CFW necessary to run it, is not public at the moment. Therefore it is not possible to use this emulator at the moment.
+The SDK used by the emulator and the CFW necessary to run it, is not public at the moment. Therefore it is currently not possible for you to use this emulator.
 
 As soon as the SDK and custom firmware have reached a usable state, I will make them public and update this section with an installation tutorial.
 
