@@ -36,6 +36,8 @@ void error_print(char *message);
 void gb_error(struct gb_s *gb, const enum gb_error_e gb_err, const uint16_t val);
 void gb_cart_ram_write(struct gb_s *gb, const uint_fast32_t addr, const uint8_t val);
 void lcd_draw_line(struct gb_s *gb, const uint8_t pixels[160], const uint_fast8_t line);
+void executeRom();
+void initEmulator();
 
 uint8_t rom[MAX_ROM_SIZE];
 
@@ -50,6 +52,13 @@ struct priv_t
 	uint16_t selected_palette[3][4];
 };
 
+struct gb_s gb;
+struct priv_t priv =
+{
+	.rom = NULL,
+	.cart_ram = NULL
+};
+
 int main()
 {
 	/* 
@@ -58,14 +67,6 @@ int main()
 		 - implement keyinput
 	*/
 	const char *rom_file_name = "/fls0/apps/gb-emu/rom.gb";
-
-	enum gb_init_error_e gb_ret;
-	struct gb_s gb;
-	struct priv_t priv =
-	{
-		.rom = NULL,
-		.cart_ram = NULL
-	};
 
 	clearScreen();
 	printf("Loading ROM", 0, 0, 1);
@@ -81,9 +82,20 @@ int main()
 		return 1;
 	}
 
+	initEmulator();
+
+	executeRom();
+
+	return 0;
+}
+
+void initEmulator()
+{
 	clearScreen();
 	printf("Init", 0, 0, 1);
 	refreshDisplay();
+
+	enum gb_init_error_e gb_ret;
 
 	/* Initialise emulator context. */
 	gb_ret = gb_init(&gb, &gb_rom_read, &gb_cart_ram_read, &gb_cart_ram_write,
@@ -121,7 +133,10 @@ int main()
 	clearScreen();
 	printf("Init complete", 0, 0, 1);
 	refreshDisplay();
+}
 
+void executeRom() 
+{
 	while (1)
 	{
 		/* Handle Key Input */
@@ -132,8 +147,6 @@ int main()
 		/* Update screen with current frame data */
 		refreshDisplay();
 	}
-
-	return 0;
 }
 
 void error_print(char *message)
