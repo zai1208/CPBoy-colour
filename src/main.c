@@ -22,6 +22,7 @@
  * IN THE SOFTWARE.
  */
 
+#include <time.h>
 #include <cas-sdk/display.h>
 #include <cas-sdk/file-system.h>
 #include <cas-sdk/input/key-input.h>
@@ -119,6 +120,14 @@ void initEmulator()
 			return 1;
 	}
 
+	/* Init gameboy rtc */
+	time_t rawtime;
+	time(&rawtime);
+	struct tm *timeinfo;
+	timeinfo = localtime(&rawtime);
+
+	gb_set_rtc(&gb, timeinfo);
+
 	/* Initialise lcd stuff */
 	gb_init_lcd(&gb, &lcd_draw_line);
 
@@ -137,15 +146,65 @@ void initEmulator()
 
 void executeRom() 
 {
+	uint32_t frame = 1;
+	uint8_t draw_frame = 0;
+
 	while (1)
 	{
+		/* Handle rtc */
+		if(frame % 60 == 0)
+			gb_tick_rtc(&gb);
+
 		/* Handle Key Input */
+		if(frame % 10 == 0)
+		{
+			CASKeyboardInput input = getKeyInput();
+
+			gb.direct.joypad_bits.a = (input.bufferOne & KEY_EXE_1) > 0;
+			gb.direct.joypad_bits.b = (input.bufferOne & KEY_PLUS_1) > 0;
+			gb.direct.joypad_bits.select = (input.bufferOne & KEY_SHIFT_1) > 0;
+			gb.direct.joypad_bits.start = (input.bufferOne & KEY_ON_CLEAR_1) > 0;
+			gb.direct.joypad_bits.up = (input.bufferTwo & KEY_UP_2) > 0;
+			gb.direct.joypad_bits.down = (input.bufferTwo & KEY_DOWN_2) > 0;
+			gb.direct.joypad_bits.left = (input.bufferOne & KEY_LEFT_1) > 0;
+			gb.direct.joypad_bits.right = (input.bufferOne & KEY_RIGHT_1) > 0;
+
+			if(input.bufferTwo & KEY_KEYBOARD_2)
+			{
+				gb.direct.frame_skip = !gb.direct.frame_skip;
+
+				if(gb.direct.frame_skip)
+					error_print("Frameskip on");
+				else
+					error_print("Frameskip off");
+			}
+
+			if(input.bufferOne & KEY_BACKSPACE_1)
+			{
+				gb.direct.interlace = !gb.direct.interlace;
+
+				if(gb.direct.interlace)
+					error_print("Interlace on");
+				else
+					error_print("Interlace off");
+			}
+		}
 
 		/* Run CPU until next frame */
 		gb_run_frame(&gb);
 
+		/* Check if display should be updated */
+		if(gb.direct.frame_skip)
+		{
+			draw_frame = !draw_frame;
+
+			if(!draw_frame)
+				continue;
+		}
+
 		/* Update screen with current frame data */
-		refreshDisplay();
+		refreshDisplay(); 
+		frame++;
 	}
 }
 
