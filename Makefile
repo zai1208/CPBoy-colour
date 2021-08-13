@@ -3,9 +3,9 @@ $(error You have to define the CAS_SDK variable and point it to the cas-sdk dire
 endif
 
 OUTFILE = app0
-APPNAME = HolzGB
+APPNAME = CPBoy
 APPAUTHOR = diddyholz
-APPVERSION = v0.40
+APPVERSION = v0.01
 
 CC = sh-elf-gcc
 BINCOPY = sh-elf-objcopy
@@ -14,7 +14,7 @@ PYTHON = python3
 SOURCEDIR = src
 BUILDDIR = obj
 
-CFLAGS = -mrenesas -mb -m4-nofpu -O2 -ffreestanding -nostartfiles -I $(CAS_SDK)/include -I $(PREFIX)/sh-elf/include -L$(PREFIX)/sh-elf/lib/ 
+CFLAGS = -mrenesas -mb -m4-nofpu -O2 -ffreestanding -nostartfiles -std=c99 -pedantic -I $(CAS_SDK)/include -I $(PREFIX)/sh-elf/include -L$(PREFIX)/sh-elf/lib/
 LDFLAGS = -T linker-script.ld 
 BCOPYFLAGS = -R .got*
 

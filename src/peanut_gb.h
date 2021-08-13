@@ -1,7 +1,8 @@
 /**
  * MIT License
  *
- * Copyright (c) 2018 Mahyar Koshkouei
+ * Original work Copyright (c) 2018 Mahyar Koshkouei
+ * Modified work Copyright (c) 2021 Sidney Krombholz 
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -156,6 +157,10 @@
 	#define MIN(a, b)   ((a) < (b) ? (a) : (b))
 #endif
 
+/*
+* Modified registers from original work to account byte/bit order for 
+* a big endian target architecture 
+*/
 struct cpu_registers_s
 {
 	/* Combine A and F registers. */
@@ -164,19 +169,19 @@ struct cpu_registers_s
 		struct
 		{
 			/* Define specific bits of Flag register. */
+			uint8_t a;
 			union
 			{
 				struct
 				{
-					unsigned unused : 4;
-					unsigned c : 1; /* Carry flag. */
-					unsigned h : 1; /* Half carry flag. */
-					unsigned n : 1; /* Add/sub flag. */
 					unsigned z : 1; /* Zero flag. */
+					unsigned n : 1; /* Add/sub flag. */
+					unsigned h : 1; /* Half carry flag. */
+					unsigned c : 1; /* Carry flag. */
+					unsigned unused : 4;
 				} f_bits;
 				uint8_t f;
 			};
-			uint8_t a;
 		};
 		uint16_t af;
 	};
@@ -185,8 +190,8 @@ struct cpu_registers_s
 	{
 		struct
 		{
-			uint8_t c;
 			uint8_t b;
+			uint8_t c;
 		};
 		uint16_t bc;
 	};
@@ -195,8 +200,8 @@ struct cpu_registers_s
 	{
 		struct
 		{
-			uint8_t e;
 			uint8_t d;
+			uint8_t e;
 		};
 		uint16_t de;
 	};
@@ -205,8 +210,8 @@ struct cpu_registers_s
 	{
 		struct
 		{
-			uint8_t l;
 			uint8_t h;
+			uint8_t l;
 		};
 		uint16_t hl;
 	};
@@ -232,9 +237,9 @@ struct gb_registers_s
 	{
 		struct
 		{
-			unsigned tac_rate : 2;	/* Input clock select */
-			unsigned tac_enable : 1;	/* Timer enable */
 			unsigned unused : 5;
+			unsigned tac_enable : 1;	/* Timer enable */
+			unsigned tac_rate : 2;	/* Input clock select */
 		};
 		uint8_t TAC;
 	};
@@ -401,11 +406,11 @@ struct gb_s
 	{
 		struct
 		{
-			uint8_t sec;
-			uint8_t min;
-			uint8_t hour;
-			uint8_t yday;
 			uint8_t high;
+			uint8_t yday;
+			uint8_t hour;
+			uint8_t min;
+			uint8_t sec;
 		} rtc_bits;
 		uint8_t cart_rtc[5];
 	};
@@ -476,14 +481,14 @@ struct gb_s
 		{
 			struct
 			{
-				unsigned a		: 1;
-				unsigned b		: 1;
-				unsigned select	: 1;
-				unsigned start	: 1;
-				unsigned right	: 1;
-				unsigned left	: 1;
-				unsigned up		: 1;
 				unsigned down	: 1;
+				unsigned up		: 1;
+				unsigned left	: 1;
+				unsigned right	: 1;
+				unsigned start	: 1;
+				unsigned select	: 1;
+				unsigned b		: 1;
+				unsigned a		: 1;
 			} joypad_bits;
 			uint8_t joypad;
 		};

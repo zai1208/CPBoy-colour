@@ -7,4 +7,5 @@ peanut-sdl
 peanut-debug
 tags
 .vscode
+obj
 app*
