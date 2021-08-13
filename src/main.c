@@ -150,6 +150,8 @@ uint8_t initEmulator()
 
 void executeRom() 
 {
+	CASKeyboardInput input = getKeyInput();
+
 	uint32_t frame = 1;
 	uint8_t draw_frame = 0;
 
@@ -162,16 +164,16 @@ void executeRom()
 		/* Handle Key Input */
 		if(frame % 10 == 0)
 		{
-			CASKeyboardInput input = getKeyInput();
+			input = getKeyInput();
 
-			gb.direct.joypad_bits.a = (input.bufferOne & KEY_EXE_1) > 0;
-			gb.direct.joypad_bits.b = (input.bufferOne & KEY_PLUS_1) > 0;
-			gb.direct.joypad_bits.select = (input.bufferOne & KEY_SHIFT_1) > 0;
-			gb.direct.joypad_bits.start = (input.bufferOne & KEY_ON_CLEAR_1) > 0;
-			gb.direct.joypad_bits.up = (input.bufferTwo & KEY_UP_2) > 0;
-			gb.direct.joypad_bits.down = (input.bufferTwo & KEY_DOWN_2) > 0;
-			gb.direct.joypad_bits.left = (input.bufferOne & KEY_LEFT_1) > 0;
-			gb.direct.joypad_bits.right = (input.bufferOne & KEY_RIGHT_1) > 0;
+			gb.direct.joypad_bits.a = !((input.bufferOne & KEY_EXE_1) > 0);
+			gb.direct.joypad_bits.b = !((input.bufferOne & KEY_PLUS_1) > 0);
+			gb.direct.joypad_bits.select = !((input.bufferOne & KEY_SHIFT_1) > 0);
+			gb.direct.joypad_bits.start = !((input.bufferOne & KEY_ON_CLEAR_1) > 0);
+			gb.direct.joypad_bits.up = !((input.bufferTwo & KEY_UP_2) > 0);
+			gb.direct.joypad_bits.down = !((input.bufferTwo & KEY_DOWN_2) > 0);
+			gb.direct.joypad_bits.left = !((input.bufferOne & KEY_LEFT_1) > 0);
+			gb.direct.joypad_bits.right = !((input.bufferOne & KEY_RIGHT_1) > 0);
 
 			if(input.bufferTwo & KEY_KEYBOARD_2)
 			{
