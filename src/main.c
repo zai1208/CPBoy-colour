@@ -38,7 +38,7 @@ void gb_error(struct gb_s *gb, const enum gb_error_e gb_err, const uint16_t val)
 void gb_cart_ram_write(struct gb_s *gb, const uint_fast32_t addr, const uint8_t val);
 void lcd_draw_line(struct gb_s *gb, const uint8_t pixels[160], const uint_fast8_t line);
 void executeRom();
-void initEmulator();
+uint8_t initEmulator();
 
 uint8_t rom[MAX_ROM_SIZE];
 
@@ -83,14 +83,15 @@ int main()
 		return 1;
 	}
 
-	initEmulator();
+	if(!initEmulator())
+		return 1;
 
 	executeRom();
 
 	return 0;
 }
 
-void initEmulator()
+uint8_t initEmulator()
 {
 	clearScreen();
 	printf("Init", 0, 0, 1);
@@ -109,24 +110,25 @@ void initEmulator()
 
 		case GB_INIT_CARTRIDGE_UNSUPPORTED:
 			error_print("Unsupported cartridge");
-			return 1;
+			return 0;
 
 		case GB_INIT_INVALID_CHECKSUM:
 			error_print("ROM checksum failure");
-			return 1;
+			return 0;
 
 		default:
 			error_print("Unknown error on init");
-			return 1;
+			return 0;
 	}
 
-	/* Init gameboy rtc */
-	time_t rawtime;
-	time(&rawtime);
-	struct tm *timeinfo;
-	timeinfo = localtime(&rawtime);
+	/* Init gameboy rtc (Just zero everything) */
+	struct tm time;
+	time.tm_sec = 0;
+	time.tm_min = 0;
+	time.tm_hour = 0;
+	time.tm_yday = 0;
 
-	gb_set_rtc(&gb, timeinfo);
+	gb_set_rtc(&gb, &time);
 
 	/* Initialise lcd stuff */
 	gb_init_lcd(&gb, &lcd_draw_line);
@@ -142,6 +144,8 @@ void initEmulator()
 	clearScreen();
 	printf("Init complete", 0, 0, 1);
 	refreshDisplay();
+
+	return 1;
 }
 
 void executeRom() 
