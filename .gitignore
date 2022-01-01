@@ -8,4 +8,5 @@ peanut-debug
 tags
 .vscode
 obj
-app*
+*.hhk
+*.bin
