@@ -33,7 +33,6 @@
 #pragma once
 
 #include <stdint.h>	/* Required for int types */
-#include <time.h>	/* Required for tm struct */
 
 /**
  * Sound support must be provided by an external library. When audio_read() and
@@ -156,6 +155,18 @@
 #ifndef MIN
 	#define MIN(a, b)   ((a) < (b) ? (a) : (b))
 #endif
+
+struct tm
+{
+	uint8_t tm_sec;
+	uint8_t tm_min;
+	uint8_t tm_hour;
+	uint8_t tm_mday;
+	uint8_t tm_mon;
+	uint8_t tm_year;
+	uint16_t tm_yday;
+};
+
 
 /*
 * Modified registers from original work to account byte/bit order for 
@@ -3659,8 +3670,8 @@ enum gb_init_error_e gb_init(struct gb_s *gb,
 	 **/
 	const uint8_t cart_mbc[] =
 	{
-		0, 1, 1, 1, -1, 2, 2, -1, 0, 0, -1, 0, 0, 0, -1, 3,
-		3, 3, 3, 3, -1, -1, -1, -1, -1, 5, 5, 5, 5, 5, 5, -1
+		0, 1, 1, 1, (uint8_t)-1, 2, 2, (uint8_t)-1, 0, 0, (uint8_t)-1, 0, 0, 0, (uint8_t)-1, 3,
+		3, 3, 3, 3, (uint8_t)-1, (uint8_t)-1, (uint8_t)-1, (uint8_t)-1, (uint8_t)-1, 5, 5, 5, 5, 5, 5, (uint8_t)-1
 	};
 	const uint8_t cart_ram[] =
 	{
