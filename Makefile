@@ -1,6 +1,6 @@
 # run `make all` to compile the .hhk and .bin file, use `make` to compile only the .bin file.
 # The .hhk file is the original format, the bin file is a newer format.
-APP_NAME:=app_template
+APP_NAME:=CPBoy
 
 ifndef SDK_DIR
 $(error You need to define the SDK_DIR environment variable, and point it to the sdk/ folder)
@@ -10,20 +10,23 @@ AS:=sh4-elf-as
 AS_FLAGS:=
 
 CC:=sh4-elf-gcc
-CC_FLAGS:=-ffreestanding -fshort-wchar -Wall -Wextra -O2 -I $(SDK_DIR)/include/
+CC_FLAGS:=-ffreestanding -fshort-wchar -Wall -Wextra -O2 -I $(SDK_DIR)/include/ -I $(PREFIX)/include/
 
 CXX:=sh4-elf-g++
-CXX_FLAGS:=-ffreestanding -fno-exceptions -fno-rtti -fshort-wchar -Wall -Wextra -O2 -I $(SDK_DIR)/include/ -m4a-nofpu
+CXX_FLAGS:=-ffreestanding -fno-exceptions -fno-rtti -fshort-wchar -Wall -Wextra -O2 -I $(SDK_DIR)/include/ -I $(PREFIX)/include/ -m4-nofpu
 
 LD:=sh4-elf-ld
-LD_FLAGS:=-nostdlib --no-undefined
+LD_FLAGS:=-nostdlib -lfxlibc --no-undefined
 
 READELF:=sh4-elf-readelf
 OBJCOPY:=sh4-elf-objcopy
 
-AS_SOURCES:=$(wildcard *.s)
-CC_SOURCES:=$(wildcard *.c)
-CXX_SOURCES:=$(wildcard *.cpp)
+SOURCEDIR = src
+BUILDDIR = obj
+
+AS_SOURCES:=$(shell find $(SOURCEDIR) -name '*.s')
+CC_SOURCES:=$(shell find $(SOURCEDIR) -name '*.c')
+CXX_SOURCES:=$(shell find $(SOURCEDIR) -name '*.cpp')
 OBJECTS:=$(AS_SOURCES:.s=.o) $(CC_SOURCES:.c=.o) $(CXX_SOURCES:.cpp=.o)
 
 APP_ELF:=$(APP_NAME).hhk
