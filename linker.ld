@@ -1,11 +1,11 @@
 ENTRY(_main);
 
 SECTIONS {
-	start_address = 0x8CFF0000;
+	start_address = 0x8CFE5000;
 	.init start_address : AT(start_address) {
 		*(.init)
 	}
-	info_address = 0x8CFF0010;
+	info_address = 0x8CFE5010;
 	. = info_address;
 	.hollyhock_name : {
 		*(.hollyhock_name)
