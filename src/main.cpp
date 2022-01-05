@@ -22,25 +22,63 @@
  * IN THE SOFTWARE.
  */
 
-#include <time.h>
-#include <cas-sdk/display.h>
-#include <cas-sdk/file-system.h>
-#include <cas-sdk/input/key-input.h>
+#include <stddef.h>
+#include <appdef.hpp>
+#include <sdk/os/file.hpp>
+#include <sdk/os/debug.hpp>
+#include <sdk/os/lcd.hpp>
+#include <sdk/os/input.hpp>
+#include <sdk/calc/calc.hpp>
 #include "peanut_gb.h"
 
 #define MAX_ROM_SIZE 0x10000
 
+#define KEY_UP				0
+#define KEY_DOWN			1
+#define KEY_LEFT			2
+#define KEY_RIGHT			3
+#define KEY_PLUS			4
+#define KEY_SHIFT			5
+#define KEY_CLEAR			6
+#define KEY_EXE				7
+#define KEY_KEYBOARD	8		
+#define KEY_BACKSPACE	9			
+
+/*
+ * Fill this section in with some information about your app.
+ * All fields are optional - so if you don't need one, take it out.
+ */
+APP_NAME("CPBoy")
+APP_DESCRIPTION("A Gameboy (DMG) emulator. Forked from PeanutGB by deltabeard.")
+APP_AUTHOR("diddyholz")
+APP_VERSION("0.01")
+
 uint8_t *read_rom_to_ram(const char *file_name);
 uint8_t gb_rom_read(struct gb_s *gb, const uint_fast32_t addr);
 uint8_t gb_cart_ram_read(struct gb_s *gb, const uint_fast32_t addr);
-void error_print(char *message);
+void error_print(const char *message);
 void gb_error(struct gb_s *gb, const enum gb_error_e gb_err, const uint16_t val);
 void gb_cart_ram_write(struct gb_s *gb, const uint_fast32_t addr, const uint8_t val);
 void lcd_draw_line(struct gb_s *gb, const uint8_t pixels[160], const uint_fast8_t line);
 void executeRom();
 uint8_t initEmulator();
+void *memcpy(void *dest, const void *src, size_t count);
 
 uint8_t rom[MAX_ROM_SIZE];
+
+InputScancode scancodes[] = 
+{
+	ScancodeUp,
+	ScancodeDown,
+	ScancodeLeft, 
+	ScancodeRight,
+	ScancodePlus,
+	ScancodeShift,
+	ScancodeClear,
+	ScancodeEXE,
+	ScancodeKeyboard,
+	ScancodeBackspace
+};
 
 struct priv_t
 {
@@ -60,42 +98,47 @@ struct priv_t priv =
 	.cart_ram = NULL
 };
 
-int main()
+extern "C"
+void main()
 {
 	/* 
 		TODO: 
 		 - implement rtc
 		 - implement keyinput
 	*/
-	const char *rom_file_name = "/fls0/apps/gb-emu/rom.gb";
+	calcInit(); //backup screen and init some variables
 
-	clearScreen();
-	printf("Loading ROM", 0, 0, 1);
-	refreshDisplay();
+	const char *rom_file_name = "\\fls0\\rom.gb";
 
-	fatInitFileAccess();
+	LCD_ClearScreen();
+	Debug_Printf(0, 0, false, 0, "Loading ROM");
+	LCD_Refresh();
 
 	priv.rom = read_rom_to_ram(rom_file_name);
 
 	if(priv.rom == NULL)
 	{
 		error_print("Error while reading ROM");
-		return 1;
+		calcEnd();
+		return;
 	}
 
 	if(!initEmulator())
-		return 1;
+	{
+		calcEnd();
+		return;
+	}
 
 	executeRom();
 
-	return 0;
+	calcEnd();
 }
 
 uint8_t initEmulator()
 {
-	clearScreen();
-	printf("Init", 0, 0, 1);
-	refreshDisplay();
+	LCD_ClearScreen();
+	Debug_Printf(0, 0, false, 0, "Init");
+	LCD_Refresh();
 
 	enum gb_init_error_e gb_ret;
 
@@ -141,17 +184,15 @@ uint8_t initEmulator()
 	};
 	memcpy(priv.selected_palette, palette, sizeof(palette));
 
-	clearScreen();
-	printf("Init complete", 0, 0, 1);
-	refreshDisplay();
+	LCD_ClearScreen();
+	Debug_Printf(0, 0, false, 0, "Init complete");
+	LCD_Refresh();
 
 	return 1;
 }
 
 void executeRom() 
 {
-	CASKeyboardInput input = getKeyInput();
-
 	uint32_t frame = 1;
 	uint8_t draw_frame = 0;
 
@@ -164,18 +205,16 @@ void executeRom()
 		/* Handle Key Input */
 		if(frame % 10 == 0)
 		{
-			input = getKeyInput();
+			gb.direct.joypad_bits.a = !Input_GetKeyState(&scancodes[KEY_EXE]);
+			gb.direct.joypad_bits.b = !Input_GetKeyState(&scancodes[KEY_PLUS]);
+			gb.direct.joypad_bits.select = !Input_GetKeyState(&scancodes[KEY_SHIFT]);
+			gb.direct.joypad_bits.start = !Input_GetKeyState(&scancodes[KEY_CLEAR]);
+			gb.direct.joypad_bits.up = !Input_GetKeyState(&scancodes[KEY_UP]);
+			gb.direct.joypad_bits.down = !Input_GetKeyState(&scancodes[KEY_DOWN]);
+			gb.direct.joypad_bits.left = !Input_GetKeyState(&scancodes[KEY_LEFT]);
+			gb.direct.joypad_bits.right = !Input_GetKeyState(&scancodes[KEY_RIGHT]);
 
-			gb.direct.joypad_bits.a = !((input.bufferOne & KEY_EXE_1) > 0);
-			gb.direct.joypad_bits.b = !((input.bufferOne & KEY_PLUS_1) > 0);
-			gb.direct.joypad_bits.select = !((input.bufferOne & KEY_SHIFT_1) > 0);
-			gb.direct.joypad_bits.start = !((input.bufferOne & KEY_ON_CLEAR_1) > 0);
-			gb.direct.joypad_bits.up = !((input.bufferTwo & KEY_UP_2) > 0);
-			gb.direct.joypad_bits.down = !((input.bufferTwo & KEY_DOWN_2) > 0);
-			gb.direct.joypad_bits.left = !((input.bufferOne & KEY_LEFT_1) > 0);
-			gb.direct.joypad_bits.right = !((input.bufferOne & KEY_RIGHT_1) > 0);
-
-			if(input.bufferTwo & KEY_KEYBOARD_2)
+			if(Input_GetKeyState(&scancodes[KEY_KEYBOARD]))
 			{
 				gb.direct.frame_skip = !gb.direct.frame_skip;
 
@@ -185,7 +224,7 @@ void executeRom()
 					error_print("Frameskip off");
 			}
 
-			if(input.bufferOne & KEY_BACKSPACE_1)
+			if(Input_GetKeyState(&scancodes[KEY_BACKSPACE]))
 			{
 				gb.direct.interlace = !gb.direct.interlace;
 
@@ -208,37 +247,36 @@ void executeRom()
 				continue;
 		}
 
+		if(Input_GetKeyState(&scancodes[KEY_CLEAR]) && Input_GetKeyState(&scancodes[KEY_SHIFT]))
+			return;
+
 		/* Update screen with current frame data */
-		refreshDisplay(); 
+		LCD_Refresh(); 
 		frame++;
 	}
 }
 
-void error_print(char *message)
+void error_print(const char *message)
 {
-	clearScreen();
-	printf(message, 0, 0, 1);
+	Debug_Printf(0, 0, false, 0, message);
 	
 	for (uint8_t i = 0; i < 100; i++)
-		refreshDisplay();	
+		LCD_Refresh();	
 }
 
 uint8_t *read_rom_to_ram(const char *file_name)
 {
-	int32_t rom_file = fatOpenFile(file_name, OPEN_READ);
+	int32_t rom_file = open(file_name, OPEN_READ);
 
 	if(rom_file < 0)
 		return NULL;
 		
-	int32_t status = fatReadFile(rom_file, rom, sizeof(rom));
-
-	printHexWord(status>>16, 0, 3);
-	printHexWord(status, 5, 3);
+	int32_t status = read(rom_file, rom, sizeof(rom));
 	
 	if(status < 0)
 		return NULL;
 
-	fatCloseFile(rom_file);
+	close(rom_file);
 
 	return rom;
 }
@@ -248,7 +286,7 @@ uint8_t *read_rom_to_ram(const char *file_name)
  */
 uint8_t gb_rom_read(struct gb_s *gb, const uint_fast32_t addr)
 {
-	const struct priv_t * const p = gb->direct.priv;
+	const struct priv_t * const p = (priv_t *)gb->direct.priv;
 	return p->rom[addr];
 }
 
@@ -257,7 +295,7 @@ uint8_t gb_rom_read(struct gb_s *gb, const uint_fast32_t addr)
  */
 uint8_t gb_cart_ram_read(struct gb_s *gb, const uint_fast32_t addr)
 {
-	const struct priv_t * const p = gb->direct.priv;
+	const struct priv_t * const p = (priv_t *)gb->direct.priv;
 	return p->cart_ram[addr];
 }
 
@@ -267,7 +305,7 @@ uint8_t gb_cart_ram_read(struct gb_s *gb, const uint_fast32_t addr)
 void gb_cart_ram_write(struct gb_s *gb, const uint_fast32_t addr, 
 	const uint8_t val)
 {
-	const struct priv_t * const p = gb->direct.priv;
+	const struct priv_t * const p = (priv_t*)gb->direct.priv;
 	p->cart_ram[addr] = val;
 }
 
@@ -277,16 +315,16 @@ void gb_cart_ram_write(struct gb_s *gb, const uint_fast32_t addr,
  */
 void gb_error(struct gb_s *gb, const enum gb_error_e gb_err, const uint16_t val)
 {
-	struct priv_t *priv = gb->direct.priv;
-
 	switch(gb_err)
 	{
 		case GB_INVALID_OPCODE:
-			error_print("Invalid opcode");
-			// fprintf(stdout, "Invalid opcode %#04x at PC: %#06x, SP: %#06x\n",
-			// 	val,
-			// 	gb->cpu_reg.pc - 1,
-			// 	gb->cpu_reg.sp);
+			Debug_Printf(0, 0, false, 0, "Invalid opcode %#04x at PC: %#06x, SP: %#06x\n",
+				val,
+				gb->cpu_reg.pc - 1,
+				gb->cpu_reg.sp);
+	
+			for (uint8_t i = 0; i < 100; i++)
+				LCD_Refresh();	
 			break;
 
 		/* Ignoring non fatal errors. */
@@ -308,19 +346,25 @@ void gb_error(struct gb_s *gb, const enum gb_error_e gb_err, const uint16_t val)
 void lcd_draw_line(struct gb_s *gb, const uint8_t pixels[160],
 	const uint_fast8_t line)
 {
-	struct priv_t *priv = gb->direct.priv;
-
-	for(unsigned int x = 0; x < LCD_WIDTH; x++)
+	struct priv_t *priv = (priv_t*)gb->direct.priv;
+	
+	for(uint16_t x = 0; x < LCD_WIDTH; x++)
 	{
 		uint16_t color = priv->selected_palette
 						[(pixels[x] & LCD_PALETTE_ALL) >> 4]
 				    [pixels[x] & 3];
 
-		frameBuffer[line * 2][x * 2] = color;
-		frameBuffer[line * 2][(x * 2) + 1] = color;
-		frameBuffer[(line * 2) + 1][x * 2] = color;
-		frameBuffer[(line * 2) + 1][(x * 2) + 1] = color;
+		vram[(line * (LCD_WIDTH * 4)) + (x * 2)] = color;
+		vram[(line * (LCD_WIDTH * 4)) + (x * 2) + 1] = color;
+		vram[(line * (LCD_WIDTH * 4)) + (LCD_WIDTH * 2) + (x * 2)] = color;
+		vram[(line * (LCD_WIDTH * 4)) + (LCD_WIDTH * 2) + (x * 2) + 1] = color;
 	}
 }
 
-int main() __attribute__((section(".text.main")));
+void *memcpy(void *dest, const void *src, size_t count)
+{
+	for (size_t i = 0; i < count; i = i + 1)
+		((uint8_t *) dest)[i] = ((uint8_t *) src)[i];
+
+	return (dest);
+}
