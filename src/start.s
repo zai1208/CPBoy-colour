@@ -6,4 +6,4 @@ nop
 main_addr:
 .long _main
 load_addr:
-.long 0x8cffe4000
+.long 0x8cfe4000
