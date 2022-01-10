@@ -26,7 +26,7 @@ Currently there is no UI to select the rom. To load your Gameboy ROM, also copy 
 | RIGHT					 | RIGHT  |
 
 **MISC:**
- - SHIFT + CLEAR: Exit emulator
+ - (-): Exit emulator
  - KEYBOARD: Toggle frameskipping (When enabled, only render every second frame, which speeds up the emulator a bit but lowers its FPS)
  - BACKSPACE: Enable Interlacing (When enabled, only render every second line and switch every frame, which speeds up the emulator a bit but makes visuals worse)
 
