@@ -31,7 +31,7 @@
 #include <sdk/calc/calc.hpp>
 #include "peanut_gb.h"
 
-#define MAX_ROM_SIZE 0x10000
+// #define MAX_ROM_SIZE 0x10000
 
 #define KEY_UP				0
 #define KEY_DOWN			1
@@ -63,8 +63,6 @@ void lcd_draw_line(struct gb_s *gb, const uint8_t pixels[160], const uint_fast8_
 void executeRom();
 uint8_t initEmulator();
 void *memcpy(void *dest, const void *src, size_t count);
-
-uint8_t rom[MAX_ROM_SIZE];
 
 InputScancode scancodes[] = 
 {
@@ -266,12 +264,23 @@ void error_print(const char *message)
 
 uint8_t *read_rom_to_ram(const char *file_name)
 {
-	int32_t rom_file = open(file_name, OPEN_READ);
-
+	int32_t rom_file = open(file_name, OPEN_READ);	
+	
 	if(rom_file < 0)
 		return NULL;
+
+	struct stat rom_file_stat;
+
+	fstat(rom_file, &rom_file_stat);
+
+	// dynamically allocate space for rom in heap
+	uint8_t *rom = new uint8_t[rom_file_stat.fileSize];
+
+	// check if pointer to rom is no nullptr
+	if(!rom)
+		return NULL;
 		
-	int32_t status = read(rom_file, rom, sizeof(rom));
+	int32_t status = read(rom_file, rom, rom_file_stat.fileSize);
 	
 	if(status < 0)
 		return NULL;
