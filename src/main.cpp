@@ -43,6 +43,7 @@
 #define KEY_EXE				7
 #define KEY_KEYBOARD	8		
 #define KEY_BACKSPACE	9			
+#define KEY_NEGATIVE	10			
 
 /*
  * Fill this section in with some information about your app.
@@ -75,7 +76,8 @@ InputScancode scancodes[] =
 	ScancodeClear,
 	ScancodeEXE,
 	ScancodeKeyboard,
-	ScancodeBackspace
+	ScancodeBackspace,
+	ScancodeNegative
 };
 
 struct priv_t
@@ -245,7 +247,7 @@ void executeRom()
 				continue;
 		}
 
-		if(Input_GetKeyState(&scancodes[KEY_CLEAR]) && Input_GetKeyState(&scancodes[KEY_SHIFT]))
+		if(Input_GetKeyState(&scancodes[KEY_NEGATIVE]))
 			return;
 
 		/* Update screen with current frame data */
