@@ -29,6 +29,8 @@
 #include <sdk/os/lcd.hpp>
 #include <sdk/os/input.hpp>
 #include <sdk/calc/calc.hpp>
+#include <sdk/os/string.hpp>
+#include <sdk/os/mem.hpp>
 #include "peanut_gb.h"
 
 // #define MAX_ROM_SIZE 0x10000
@@ -57,9 +59,14 @@ APP_VERSION("0.0.1-alpha")
 uint8_t *read_rom_to_ram(const char *file_name);
 uint8_t gb_rom_read(struct gb_s *gb, const uint_fast32_t addr);
 uint8_t gb_cart_ram_read(struct gb_s *gb, const uint_fast32_t addr);
+uint8_t read_cart_ram_file(const char *save_file_name, uint8_t **dest,
+			const size_t len);
+uint8_t write_cart_ram_file(const char *save_file_name, uint8_t **dest,
+			const size_t len);
 void error_print(const char *message);
 void gb_error(struct gb_s *gb, const enum gb_error_e gb_err, const uint16_t val);
 void gb_cart_ram_write(struct gb_s *gb, const uint_fast32_t addr, const uint8_t val);
+void get_cart_ram_file_name(char *name_buffer);
 void lcd_draw_line(struct gb_s *gb, const uint8_t pixels[160], const uint_fast8_t line);
 void executeRom();
 uint8_t initEmulator();
@@ -110,6 +117,9 @@ void main()
 
 	const char *rom_file_name = "\\fls0\\rom.gb";
 
+	// make save directory
+	mkdir("\\fls0\\gb-saves");
+
 	LCD_ClearScreen();
 	Debug_Printf(0, 0, false, 0, "Loading ROM");
 	LCD_Refresh();
@@ -130,6 +140,17 @@ void main()
 	}
 
 	executeRom();
+
+	// save cart rom
+	char cart_ram_file_name[37];
+
+	get_cart_ram_file_name(cart_ram_file_name);
+
+	// When rom is fully executed, save ram and cleanup
+	write_cart_ram_file(cart_ram_file_name, &priv.cart_ram, gb_get_save_size(&gb));
+
+	free(priv.cart_ram);
+	free(priv.rom);
 
 	calcEnd();
 }
@@ -163,6 +184,11 @@ uint8_t initEmulator()
 			error_print("Unknown error on init");
 			return 0;
 	}
+
+	// load cart rom
+	char cart_ram_file_name[37];
+
+	read_cart_ram_file(cart_ram_file_name, &priv.cart_ram, gb_get_save_size(&gb));	
 
 	/* Init gameboy rtc (Just zero everything) */
 	struct tm time;
@@ -318,6 +344,87 @@ void gb_cart_ram_write(struct gb_s *gb, const uint_fast32_t addr,
 {
 	const struct priv_t * const p = (priv_t*)gb->direct.priv;
 	p->cart_ram[addr] = val;
+}
+
+/**
+ * Reads the cart ram (savegame) from a file. Returns 0 if everything 
+ * went well, else something went wrong. 
+ */
+uint8_t read_cart_ram_file(const char *save_file_name, uint8_t **dest,
+			const size_t len)
+{
+	int f;
+
+	/* If save file not required. */
+	if(len == 0)
+	{
+		*dest = NULL;
+		return 0;
+	}
+
+	/* Allocate enough memory to hold save file. */
+	*dest = new uint8_t[len];
+
+	if(!*dest)
+		return 1;
+
+	f = open(save_file_name, OPEN_READ);
+
+	/* It doesn't matter if the save file doesn't exist. We initialise the
+	 * save memory allocated above. The save file will be created on exit. */
+	if(f < 0)
+	{
+		for(uint32_t x = 0; x < len; x++)
+			(*dest)[x] = 0;	
+
+		return 0;
+	}
+
+	/* Read save file to allocated memory. */
+	read(f, *dest, len);
+	close(f);
+
+	return 0;
+}
+
+/**
+ * Writes the cart ram (savegame) to a file. Returns 0 if everything 
+ * went well, else something went wrong. 
+ */
+uint8_t write_cart_ram_file(const char *save_file_name, uint8_t **dest,
+			const size_t len)
+{
+	int f;
+
+	if(len == 0 || !*dest)
+		return 0;
+
+	f = open(save_file_name, OPEN_CREATE | OPEN_WRITE);
+
+	if(f < 0)
+		return 1;
+
+	/* Record save file. */
+	write(f, *dest, len);
+	close(f);
+
+	return 0;
+}
+
+/*  
+ * Gets the filename of the current roms cart ram save
+ * Make sure the buffer is big enough
+ */
+void get_cart_ram_file_name(char *name_buffer)
+{
+	strcpy(name_buffer, "\\fls0\\gb-saves\\");
+
+	char temp[17];
+
+	gb_get_rom_name(&gb, temp);
+
+	strcat(name_buffer, temp);	
+	strcat(name_buffer, ".csav");
 }
 
 /**
