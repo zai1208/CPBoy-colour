@@ -231,37 +231,35 @@ void executeRom()
 			gb_tick_rtc(&gb);
 
 		/* Handle Key Input */
-		if(frame % 10 == 0)
+		gb.direct.joypad_bits.a = !Input_GetKeyState(&scancodes[KEY_EXE]);
+		gb.direct.joypad_bits.b = !Input_GetKeyState(&scancodes[KEY_PLUS]);
+		gb.direct.joypad_bits.select = !Input_GetKeyState(&scancodes[KEY_SHIFT]);
+		gb.direct.joypad_bits.start = !Input_GetKeyState(&scancodes[KEY_CLEAR]);
+		gb.direct.joypad_bits.up = !Input_GetKeyState(&scancodes[KEY_UP]);
+		gb.direct.joypad_bits.down = !Input_GetKeyState(&scancodes[KEY_DOWN]);
+		gb.direct.joypad_bits.left = !Input_GetKeyState(&scancodes[KEY_LEFT]);
+		gb.direct.joypad_bits.right = !Input_GetKeyState(&scancodes[KEY_RIGHT]);
+
+		if(Input_GetKeyState(&scancodes[KEY_KEYBOARD]))
 		{
-			gb.direct.joypad_bits.a = !Input_GetKeyState(&scancodes[KEY_EXE]);
-			gb.direct.joypad_bits.b = !Input_GetKeyState(&scancodes[KEY_PLUS]);
-			gb.direct.joypad_bits.select = !Input_GetKeyState(&scancodes[KEY_SHIFT]);
-			gb.direct.joypad_bits.start = !Input_GetKeyState(&scancodes[KEY_CLEAR]);
-			gb.direct.joypad_bits.up = !Input_GetKeyState(&scancodes[KEY_UP]);
-			gb.direct.joypad_bits.down = !Input_GetKeyState(&scancodes[KEY_DOWN]);
-			gb.direct.joypad_bits.left = !Input_GetKeyState(&scancodes[KEY_LEFT]);
-			gb.direct.joypad_bits.right = !Input_GetKeyState(&scancodes[KEY_RIGHT]);
+			gb.direct.frame_skip = !gb.direct.frame_skip;
 
-			if(Input_GetKeyState(&scancodes[KEY_KEYBOARD]))
-			{
-				gb.direct.frame_skip = !gb.direct.frame_skip;
-
-				if(gb.direct.frame_skip)
-					error_print("Frameskip on");
-				else
-					error_print("Frameskip off");
-			}
-
-			if(Input_GetKeyState(&scancodes[KEY_BACKSPACE]))
-			{
-				gb.direct.interlace = !gb.direct.interlace;
-
-				if(gb.direct.interlace)
-					error_print("Interlace on");
-				else
-					error_print("Interlace off");
-			}
+			if(gb.direct.frame_skip)
+				error_print("Frameskip on");
+			else
+				error_print("Frameskip off");
 		}
+
+		if(Input_GetKeyState(&scancodes[KEY_BACKSPACE]))
+		{
+			gb.direct.interlace = !gb.direct.interlace;
+
+			if(gb.direct.interlace)
+				error_print("Interlace on");
+			else
+				error_print("Interlace off");
+		}
+		
 
 		/* Run CPU until next frame */
 		gb_run_frame(&gb);
