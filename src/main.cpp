@@ -188,6 +188,8 @@ uint8_t initEmulator()
 	// load cart rom
 	char cart_ram_file_name[37];
 
+	get_cart_ram_file_name(cart_ram_file_name);
+
 	read_cart_ram_file(cart_ram_file_name, &priv.cart_ram, gb_get_save_size(&gb));	
 
 	/* Init gameboy rtc (Just zero everything) */
