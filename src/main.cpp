@@ -51,9 +51,9 @@
  * Fill this section in with some information about your app.
  * All fields are optional - so if you don't need one, take it out.
  */
-APP_NAME("CPBoy")
+APP_NAME("CPBoy-Dev")
 APP_DESCRIPTION("A Gameboy (DMG) emulator. Forked from PeanutGB by deltabeard.")
-APP_AUTHOR("diddyholz")
+APP_AUTHOR("diddyholz, modded by s3ansh33p")
 APP_VERSION("0.0.1-alpha")
 
 uint8_t *read_rom_to_ram(const char *file_name);
@@ -105,6 +105,57 @@ struct priv_t priv =
 	.cart_ram = NULL
 };
 
+// get the roms in the roms folder
+
+struct dirEntry{
+	char fileName[100];
+	char type;
+};
+int dirFiles = 0;
+struct dirEntry directory[64];
+
+void findFiles () {
+	char g_path[400] = "\\fls0\\roms\\";
+	wchar_t g_wpath[400];
+
+	memset(g_wpath,0,sizeof(g_wpath));
+	
+	//convert from char to wchar
+	for(int i=0; g_path[i]!=0; i++){
+		wchar_t ch = g_path[i];
+		g_wpath[i] = ch;
+	}
+	
+	//add the * to the file path 
+	{
+		int i=0;
+		while(g_wpath[i]!=0)i++; //seek to the end of the string
+		g_wpath[i++]='*'; //add an *
+		g_wpath[i  ]= 0 ; //add the 0
+	}
+
+	int findHandle;
+	wchar_t fileName[100];
+	struct findInfo findInfoBuf;
+	int ret = findFirst(g_wpath, &findHandle, fileName, &findInfoBuf);
+	while (ret>=0){
+		//create dirEntry structure
+		struct dirEntry thisfile;
+		memset(&thisfile, 0, sizeof(thisfile));
+		//copy file name
+		for (int i=0; fileName[i]!=0; i++){
+			wchar_t ch = fileName[i];
+			thisfile.fileName[i] = ch;
+		}
+		//save this dirEntry to directory
+		directory[dirFiles++] = thisfile;
+		
+		//serch the next
+		ret = findNext(findHandle, fileName, &findInfoBuf);
+	}
+	findClose(findHandle);
+}
+
 extern "C"
 void main()
 {
@@ -115,12 +166,40 @@ void main()
 	*/
 	calcInit(); //backup screen and init some variables
 
-	const char *rom_file_name = "\\fls0\\rom.gb";
+	char *rom_file_name = "\\fls0\\roms\\";
 
 	// make save directory
 	mkdir("\\fls0\\gb-saves");
 
-	LCD_ClearScreen();
+	findFiles();
+
+	// menu
+	bool inMenu = true;
+	int menuIndex = 0;
+	while (inMenu){
+		// render
+		fillScreen(color(0,0,0));
+		Debug_Printf(0, 25+menuIndex, true, 0, ">");
+		Debug_Printf(0, 24, true, 0, "Detected ROMs (in \\fls0\\roms)");
+		for (int i=0; i<dirFiles; i++){
+			Debug_Printf(2, 25+i, true, 0, "%i. %s", i+1, directory[i].fileName);
+		}
+		LCD_Refresh();
+		if (Input_GetKeyState(&scancodes[KEY_UP])) {
+			menuIndex--;
+			if (menuIndex<0) menuIndex = dirFiles-1;
+		}
+		if (Input_GetKeyState(&scancodes[KEY_DOWN])) {
+			menuIndex++;
+			if (menuIndex>=dirFiles) menuIndex = 0;
+		}
+		if (Input_GetKeyState(&scancodes[KEY_EXE])) {
+			strcat(rom_file_name, directory[menuIndex].fileName);
+			inMenu = false;
+		}
+	}
+
+	// LCD_ClearScreen();
 	Debug_Printf(0, 0, false, 0, "Loading ROM");
 	LCD_Refresh();
 
@@ -157,7 +236,7 @@ void main()
 
 uint8_t initEmulator()
 {
-	LCD_ClearScreen();
+	// LCD_ClearScreen();
 	Debug_Printf(0, 0, false, 0, "Init");
 	LCD_Refresh();
 
@@ -212,7 +291,7 @@ uint8_t initEmulator()
 	};
 	memcpy(priv.selected_palette, palette, sizeof(palette));
 
-	LCD_ClearScreen();
+	// LCD_ClearScreen();
 	Debug_Printf(0, 0, false, 0, "Init complete");
 	LCD_Refresh();
 
