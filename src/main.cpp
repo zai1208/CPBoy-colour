@@ -227,7 +227,7 @@ void executeRom()
 	while (1)
 	{
 		/* Handle rtc */
-		if(frame % 60 == 0)
+		if(frame % 24 == 0)
 			gb_tick_rtc(&gb);
 
 		/* Handle Key Input */
