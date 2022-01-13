@@ -395,6 +395,7 @@ struct gb_s
 #		define LCD_SEARCH_OAM	2
 #		define LCD_TRANSFER	3
 		unsigned lcd_mode	: 2;
+		unsigned lcd_blank	: 1;
 	};
 
 	/* Cartridge information:
@@ -403,7 +404,7 @@ struct gb_s
 	/* Whether the MBC has internal RAM. */
 	uint8_t cart_ram;
 	/* Number of ROM banks in cartridge. */
-	uint16_t num_rom_banks;
+	uint16_t num_rom_banks_mask;
 	/* Number of RAM banks in cartridge. */
 	uint8_t num_ram_banks;
 
@@ -603,7 +604,7 @@ uint8_t __gb_read(struct gb_s *gb, const uint_fast16_t addr)
 				return gb->gb_cart_ram_read(gb, addr - CART_RAM_ADDR);
 		}
 
-		return 0;
+		return 0xFF;
 
 	case 0xC:
 		return gb->wram[addr - WRAM_0_ADDR];
@@ -744,7 +745,7 @@ void __gb_write(struct gb_s *gb, const uint_fast16_t addr, const uint8_t val)
 		{
 			gb->selected_rom_bank = (gb->selected_rom_bank & 0x100) | val;
 			gb->selected_rom_bank =
-				gb->selected_rom_bank % gb->num_rom_banks;
+				gb->selected_rom_bank & gb->num_rom_banks_mask;
 			return;
 		}
 
@@ -776,7 +777,7 @@ void __gb_write(struct gb_s *gb, const uint_fast16_t addr, const uint8_t val)
 		else if(gb->mbc == 5)
 			gb->selected_rom_bank = (val & 0x01) << 8 | (gb->selected_rom_bank & 0xFF);
 
-		gb->selected_rom_bank = gb->selected_rom_bank % gb->num_rom_banks;
+		gb->selected_rom_bank = gb->selected_rom_bank & gb->num_rom_banks_mask;
 		return;
 
 	case 0x4:
@@ -785,7 +786,7 @@ void __gb_write(struct gb_s *gb, const uint_fast16_t addr, const uint8_t val)
 		{
 			gb->cart_ram_bank = (val & 3);
 			gb->selected_rom_bank = ((val & 3) << 5) | (gb->selected_rom_bank & 0x1F);
-			gb->selected_rom_bank = gb->selected_rom_bank % gb->num_rom_banks;
+			gb->selected_rom_bank = gb->selected_rom_bank & gb->num_rom_banks_mask;
 		}
 		else if(gb->mbc == 3)
 			gb->cart_ram_bank = val;
@@ -917,6 +918,13 @@ void __gb_write(struct gb_s *gb, const uint_fast16_t addr, const uint8_t val)
 
 		/* LCD Registers */
 		case 0x40:
+			if(((gb->gb_reg.LCDC & LCDC_ENABLE) == 0) &&
+				(val & LCDC_ENABLE))
+			{
+				gb->counter.lcd_count = 0;
+				gb->lcd_blank = 1;
+			}
+
 			gb->gb_reg.LCDC = val;
 
 			/* LY fixed to 0 when LCD turned off. */
@@ -3473,6 +3481,7 @@ void __gb_step_cpu(struct gb_s *gb)
 			gb->lcd_mode = LCD_VBLANK;
 			gb->gb_frame = 1;
 			gb->gb_reg.IF |= VBLANK_INTR;
+			gb->lcd_blank = 0;
 
 			if(gb->gb_reg.STAT & STAT_MODE_1_INTR)
 				gb->gb_reg.IF |= LCDC_INTR;
@@ -3531,7 +3540,8 @@ void __gb_step_cpu(struct gb_s *gb)
 	{
 		gb->lcd_mode = LCD_TRANSFER;
 #if ENABLE_LCD
-		__gb_draw_line(gb);
+		if(!gb->lcd_blank)
+			__gb_draw_line(gb);
 #endif
 	}
 }
@@ -3642,6 +3652,8 @@ void gb_reset(struct gb_s *gb)
 
 	gb->direct.joypad = 0xFF;
 	gb->gb_reg.P1 = 0xCF;
+
+	memset(gb->vram, 0x00, VRAM_SIZE);
 }
 
 /**
@@ -3678,14 +3690,9 @@ enum gb_init_error_e gb_init(struct gb_s *gb,
 		0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0,
 		1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0
 	};
-	const uint16_t num_rom_banks[] =
+	const uint16_t num_rom_banks_mask[] =
 	{
-		2, 4, 8, 16, 32, 64, 128, 256, 512, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 72, 80, 96, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+		2, 4, 8, 16, 32, 64, 128, 256, 512
 	};
 	const uint8_t num_ram_banks[] = { 0, 1, 1, 4, 16, 8 };
 
@@ -3717,14 +3724,15 @@ enum gb_init_error_e gb_init(struct gb_s *gb,
 		const uint8_t mbc_value = gb->gb_rom_read(gb, mbc_location);
 
 		if(mbc_value > sizeof(cart_mbc) - 1 ||
-				(gb->mbc = cart_mbc[gb->gb_rom_read(gb, mbc_location)]) == 255u)
+				(gb->mbc = cart_mbc[mbc_value]) == 255u)
 			return GB_INIT_CARTRIDGE_UNSUPPORTED;
 	}
 
 	gb->cart_ram = cart_ram[gb->gb_rom_read(gb, mbc_location)];
-	gb->num_rom_banks = num_rom_banks[gb->gb_rom_read(gb, bank_count_location)];
+	gb->num_rom_banks_mask = num_rom_banks_mask[gb->gb_rom_read(gb, bank_count_location)] - 1;
 	gb->num_ram_banks = num_ram_banks[gb->gb_rom_read(gb, ram_size_location)];
 
+	gb->lcd_blank = 0;
 	gb->display.lcd_draw_line = NULL;
 
 	gb_reset(gb);
