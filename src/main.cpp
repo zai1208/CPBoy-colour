@@ -69,6 +69,7 @@ void gb_cart_ram_write(struct gb_s *gb, const uint_fast32_t addr, const uint8_t 
 void get_cart_ram_file_name(char *name_buffer);
 void lcd_draw_line(struct gb_s *gb, const uint8_t pixels[160], const uint_fast8_t line);
 void executeRom();
+void findFiles();
 uint8_t initEmulator();
 void *memcpy(void *dest, const void *src, size_t count);
 
@@ -105,6 +106,11 @@ struct priv_t priv =
 	.cart_ram = NULL
 };
 
+// get the roms in the roms folder
+char fileNames[64][100];
+
+int dirFiles = 0;
+
 extern "C"
 void main()
 {
@@ -115,12 +121,61 @@ void main()
 	*/
 	calcInit(); //backup screen and init some variables
 
-	const char *rom_file_name = "\\fls0\\rom.gb";
+	char *rom_file_name = "\\fls0\\roms\\";
 
 	// make save directory
 	mkdir("\\fls0\\gb-saves");
 
-	LCD_ClearScreen();
+	findFiles();
+
+	// menu
+	bool inMenu = true;
+	bool buttonPressed = false;
+
+	int8_t menuIndex = 0;
+
+	while(inMenu) 
+	{
+		// render
+		fillScreen(color(0, 0, 0));
+
+		Debug_Printf(0, 25 + menuIndex, true, 0, ">");
+		Debug_Printf(0, 24, true, 0, "Detected ROMs (in \\fls0\\roms)");
+
+		for (int i = 0; i < dirFiles; i++)
+			Debug_Printf(2, 25 + i, true, 0, "%i. %s", i + 1, fileNames[i]);
+
+		LCD_Refresh();
+		
+		// wait for keys to be released
+		while(Input_IsAnyKeyDown() && buttonPressed) { }
+		
+		buttonPressed = false;
+
+		if (Input_GetKeyState(&scancodes[KEY_UP])) 
+		{
+			buttonPressed = true;
+			menuIndex--;
+			
+			if (menuIndex < 0) menuIndex = dirFiles - 1;
+		}
+		if (Input_GetKeyState(&scancodes[KEY_DOWN])) 
+		{
+			buttonPressed = true;
+			menuIndex++;
+
+			if (menuIndex >= dirFiles) menuIndex = 0;
+		}
+		if (Input_GetKeyState(&scancodes[KEY_EXE])) 
+		{
+			buttonPressed = true;
+			inMenu = false;
+
+			strcat(rom_file_name, fileNames[menuIndex]);
+		}
+	}
+
+	fillScreen(color(0, 0, 0));
 	Debug_Printf(0, 0, false, 0, "Loading ROM");
 	LCD_Refresh();
 
@@ -157,7 +212,7 @@ void main()
 
 uint8_t initEmulator()
 {
-	LCD_ClearScreen();
+	// LCD_ClearScreen();
 	Debug_Printf(0, 0, false, 0, "Init");
 	LCD_Refresh();
 
@@ -212,7 +267,7 @@ uint8_t initEmulator()
 	};
 	memcpy(priv.selected_palette, palette, sizeof(palette));
 
-	LCD_ClearScreen();
+	// LCD_ClearScreen();
 	Debug_Printf(0, 0, false, 0, "Init complete");
 	LCD_Refresh();
 
@@ -280,6 +335,54 @@ void executeRom()
 		LCD_Refresh(); 
 		frame++;
 	}
+}
+
+void findFiles() 
+{
+	char g_path[400] = "\\fls0\\roms\\";
+	wchar_t g_wpath[400];
+
+	memset(g_wpath, 0, sizeof(g_wpath));
+	
+	//convert from char to wchar
+	for(int i = 0; g_path[i] != 0; i++)
+	{
+		wchar_t ch = g_path[i];
+		g_wpath[i] = ch;
+	}
+	
+	//add the * to the file path 
+	{
+		int i = 0;
+		while(g_wpath[i] != 0) i++; //seek to the end of the string
+		g_wpath[i++]='*'; //add an *
+		g_wpath[i  ]= 0 ; //add the 0
+	}
+
+	wchar_t fileName[100];
+	struct findInfo findInfoBuf;
+	int findHandle;
+	int ret = findFirst(g_wpath, &findHandle, fileName, &findInfoBuf);
+
+	while(ret >= 0) 
+	{
+		//create dirEntry structure
+		memset(&fileNames[dirFiles], 0, sizeof(fileNames[dirFiles]));
+
+		//copy file name
+		for(int i = 0; fileName[i] != 0; i++) {
+			wchar_t ch = fileName[i];
+
+			fileNames[dirFiles][i] = ch;
+		}
+
+		dirFiles++;
+		
+		//serch the next
+		ret = findNext(findHandle, fileName, &findInfoBuf);
+	}
+
+	findClose(findHandle);
 }
 
 void error_print(const char *message)
