@@ -33,7 +33,7 @@ To load your Gameboy ROM, create a directory named "roms" and copy it to that di
 
 ## Building
 
-If you want to build the emulator from source you will need the [Hollyhock-2 SDK](https://github.com/SnailMath/hollyhock-2/). Then, run ´make hhk´ in your terminal to build it. Make sure to build the .hhk file and not the .bin file because the .bin file causes the emulator to freeze and makes the CPU of the calculator behave weirdly (I have absolutely no idea why that happens).
+If you want to build the emulator from source you will need the [Hollyhock-2 SDK](https://github.com/SnailMath/hollyhock-2/). Then, run ´make´ in your terminal to build it.
 
 
 ## License
