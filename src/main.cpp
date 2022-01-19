@@ -54,7 +54,7 @@
 APP_NAME("CPBoy")
 APP_DESCRIPTION("A Gameboy (DMG) emulator. Forked from PeanutGB by deltabeard.")
 APP_AUTHOR("diddyholz")
-APP_VERSION("0.0.1-alpha")
+APP_VERSION("0.0.2-alpha")
 
 uint8_t *read_rom_to_ram(const char *file_name);
 uint8_t gb_rom_read(struct gb_s *gb, const uint_fast32_t addr);
