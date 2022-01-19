@@ -364,6 +364,8 @@ void findFiles()
 	int findHandle;
 	int ret = findFirst(g_wpath, &findHandle, fileName, &findInfoBuf);
 
+	dirFiles = 0;
+
 	while(ret >= 0) 
 	{
 		//create dirEntry structure
