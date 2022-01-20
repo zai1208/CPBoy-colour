@@ -1,6 +1,6 @@
 #include <stdint.h>
 #include <SDK/calc/calc.hpp>
-#include "UI.h"
+#include "UI.hpp"
 
 #define FONTBASE 0x8062F4C8
 #define DISPLAY_WIDTH	320

@@ -31,6 +31,7 @@
 #include <sdk/calc/calc.hpp>
 #include <sdk/os/string.hpp>
 #include <sdk/os/mem.hpp>
+#include "UI/UI.hpp"
 #include "peanut_gb.h"
 
 // #define MAX_ROM_SIZE 0x10000
@@ -45,7 +46,12 @@
 #define KEY_EXE				7
 #define KEY_KEYBOARD	8		
 #define KEY_BACKSPACE	9			
-#define KEY_NEGATIVE	10			
+#define KEY_NEGATIVE	10		
+
+#define TAB_INFO 				0
+#define TAB_SETTINGS 		1
+#define TAB_LOAD_ROM 		2
+#define TAB_SAVESTATES 	3
 
 /*
  * Fill this section in with some information about your app.
@@ -71,6 +77,9 @@ void lcd_draw_line(struct gb_s *gb, const uint8_t pixels[160], const uint_fast8_
 void executeRom();
 void findFiles();
 uint8_t initEmulator();
+uint8_t emulation_menu();
+void display_pause_overlay();
+void draw_emulation_menu(uint8_t selected_tab, const uint8_t tab_count);
 void *memcpy(void *dest, const void *src, size_t count);
 
 InputScancode scancodes[] = 
@@ -85,7 +94,7 @@ InputScancode scancodes[] =
 	ScancodeEXE,
 	ScancodeKeyboard,
 	ScancodeBackspace,
-	ScancodeNegative
+	ScancodeNegative,
 };
 
 struct priv_t
@@ -328,8 +337,14 @@ void executeRom()
 				continue;
 		}
 
+		// if(Input_GetKeyState(&scancodes[KEY_NEGATIVE]))
+		// 	return;
+
 		if(Input_GetKeyState(&scancodes[KEY_NEGATIVE]))
-			return;
+		{
+			if(emulation_menu())
+				return;
+		}
 
 		/* Update screen with current frame data */
 		LCD_Refresh(); 
@@ -421,6 +436,146 @@ uint8_t *read_rom_to_ram(const char *file_name)
 	close(rom_file);
 
 	return rom;
+}
+
+uint8_t emulation_menu()
+{
+	// show emulation paused text
+	display_pause_overlay();
+
+	const uint8_t tab_count = 4;
+
+	bool in_menu = true;
+	bool button_pressed = true;
+
+	uint8_t selected_tab = 0;
+	uint8_t selected_item = 0;
+
+	while(in_menu)
+	{
+		draw_emulation_menu(selected_tab, tab_count);
+
+		while(Input_IsAnyKeyDown() && button_pressed) { }
+		
+		button_pressed = false;
+
+		// handle controls
+		if(Input_GetKeyState(&scancodes[KEY_NEGATIVE]))
+		{
+			while(Input_IsAnyKeyDown()) { }
+
+			return 0;
+		}
+
+		if(Input_GetKeyState(&scancodes[KEY_RIGHT]))
+		{
+			button_pressed = true;
+
+			if(selected_tab != (tab_count - 1))
+				selected_tab++;
+		}
+		
+		if(Input_GetKeyState(&scancodes[KEY_LEFT]))
+		{
+			button_pressed = true;
+
+			if(selected_tab != 0)
+				selected_tab--;
+		}
+	}
+
+	return 0;
+}
+
+void display_pause_overlay()
+{
+	// go through every pixel of the gameboy screen and darken it
+	for(uint16_t y = 0; y < LCD_HEIGHT; y++)
+	{
+		for(uint16_t x = 0; x < LCD_WIDTH; x++)
+		{
+			uint32_t pixel = vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2)];
+		
+			uint8_t red = ((RGB565_TO_R(pixel) * 13108) / 65536);
+			uint8_t green = ((RGB565_TO_G(pixel) * 13108) / 65536);
+			uint8_t blue = ((RGB565_TO_B(pixel) * 13108) / 65536);
+		
+			pixel = RGB_TO_RGB565(red, green, blue); 
+
+			vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2)] = pixel;
+			vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2) + 1] = pixel;
+			vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2)] = pixel;
+			vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2) + 1] = pixel;
+		}
+	}
+
+	// print game paused text
+	print_string("Emulation paused", 112, 128, 0, 0xFFFF, 0x0000, 1);
+	print_string("Press [(-)] to continue", 91, 148, 0, 0xFFFF, 0x0000, 1);
+
+	LCD_Refresh();
+}
+
+void draw_emulation_menu(uint8_t selected_tab, const uint8_t tab_count)
+{
+	const uint16_t tab_width = 80;
+	const uint16_t tab_height = 18;
+	const uint16_t main_y = LCD_HEIGHT * 2;
+	const uint16_t main_height = (528 - main_y) - tab_height;
+	const uint16_t main_bg = 0x2104;
+	const uint16_t bottom_bar_y = 528 - tab_height;
+	const uint16_t bottom_bar_bg = 0x39E7;
+	const uint16_t bottom_bar_selected = 0x04A0;
+
+	// fill menu part of screen
+	for(uint16_t y = 0; y < main_height; y++)
+	{
+		for(uint16_t x = 0; x < (LCD_WIDTH * 2); x++)
+			vram[((main_y + y) * (LCD_WIDTH * 2) + x)] = main_bg;
+	}
+	
+	// draw bottom bar
+	for(uint16_t y = 0; y < tab_height; y++)
+	{
+		for(uint16_t x = 0; x < (LCD_WIDTH * 2); x++)
+		{
+			if(x >= selected_tab * tab_width && x < (selected_tab + 1) * tab_width)
+				vram[((bottom_bar_y + y) * (LCD_WIDTH * 2)) + x] = bottom_bar_selected;
+			else
+				vram[((bottom_bar_y + y) * (LCD_WIDTH * 2)) + x] = bottom_bar_bg;
+		}
+	}
+
+	for(uint8_t i = 0; i < tab_count; i++)
+	{
+		// print tab label
+		char tab_label[9];
+
+		switch (i)
+		{
+		case TAB_INFO:
+			strcpy(tab_label, "Current");
+			break;
+		case TAB_LOAD_ROM:
+			strcpy(tab_label, "Load");
+			break;
+		case TAB_SAVESTATES:
+			strcpy(tab_label, "Saves");
+			break;
+		case TAB_SETTINGS:
+			strcpy(tab_label, "Settings");
+			break;
+		
+		default:
+			break;
+		}
+
+		print_string(tab_label, (tab_width * i) + ((tab_width - (strlen(tab_label) * (DEBUG_CHAR_WIDTH - 2))) / 2), 512, 0, 0xFFFF, 0x0000, 1);
+	}
+
+	// draw menu contents
+	
+	LCD_Refresh();
 }
 
 /**
