@@ -3,7 +3,8 @@
 #include "UI.hpp"
 
 #define FONTBASE 0x8062F4C8
-#define DISPLAY_WIDTH	320
+#define DISPLAY_WIDTH		320
+#define DISPLAY_HEIGHT	528
 
 void word_to_string(uint16_t word, char* string);
 
@@ -73,6 +74,9 @@ void print_char(char character, uint16_t x, uint16_t y, uint8_t size,
 
 			for(uint8_t x = 0; x < (DEBUG_CHAR_WIDTH * size); x++)
 			{
+				if(tempYPos >= DISPLAY_HEIGHT || tempXPos >= DISPLAY_WIDTH)
+					continue;
+
 				vram[(tempYPos * DISPLAY_WIDTH) + tempXPos] = background;
 				tempXPos++;
 			}
@@ -97,6 +101,9 @@ void print_char(char character, uint16_t x, uint16_t y, uint8_t size,
 		{
 			if(*pixel == 0)
 			{
+				if(tempYPos >= DISPLAY_HEIGHT || tempXPos >= DISPLAY_WIDTH)
+					continue;
+					
 				vram[(tempYPos * DISPLAY_WIDTH) + tempXPos] = foreground;
 
 				if(size == 2)
