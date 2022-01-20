@@ -79,7 +79,7 @@ void findFiles();
 uint8_t initEmulator();
 uint8_t emulation_menu();
 void display_pause_overlay();
-void draw_emulation_menu(uint8_t selected_tab, const uint8_t tab_count);
+void draw_emulation_menu(uint8_t selected_tab, uint8_t selected_item, const uint8_t tab_count);
 void *memcpy(void *dest, const void *src, size_t count);
 
 InputScancode scancodes[] = 
@@ -117,6 +117,8 @@ struct priv_t priv =
 
 // get the roms in the roms folder
 char fileNames[64][100];
+
+uint8_t current_filename = 0;
 
 int dirFiles = 0;
 
@@ -179,6 +181,8 @@ void main()
 		{
 			buttonPressed = true;
 			inMenu = false;
+
+			current_filename = menuIndex;
 
 			strcat(rom_file_name, fileNames[menuIndex]);
 		}
@@ -448,12 +452,14 @@ uint8_t emulation_menu()
 	bool in_menu = true;
 	bool button_pressed = true;
 
+	uint8_t item_counts[tab_count] = { 4, 1, 1, 1 };
+
 	uint8_t selected_tab = 0;
 	uint8_t selected_item = 0;
 
 	while(in_menu)
 	{
-		draw_emulation_menu(selected_tab, tab_count);
+		draw_emulation_menu(selected_tab, selected_item, tab_count);
 
 		while(Input_IsAnyKeyDown() && button_pressed) { }
 		
@@ -472,7 +478,10 @@ uint8_t emulation_menu()
 			button_pressed = true;
 
 			if(selected_tab != (tab_count - 1))
+			{
 				selected_tab++;
+				selected_item = 0;
+			}
 		}
 		
 		if(Input_GetKeyState(&scancodes[KEY_LEFT]))
@@ -480,7 +489,62 @@ uint8_t emulation_menu()
 			button_pressed = true;
 
 			if(selected_tab != 0)
+			{
 				selected_tab--;
+				selected_item = 0;
+			}
+		}
+		
+		if(Input_GetKeyState(&scancodes[KEY_UP]))
+		{
+			button_pressed = true;
+
+			if(selected_item != 0)
+				selected_item--;
+		}
+		
+		if(Input_GetKeyState(&scancodes[KEY_DOWN]))
+		{
+			button_pressed = true;
+
+			if(selected_item != (item_counts[selected_tab] - 1))
+				selected_item++;
+		}
+		
+		if(Input_GetKeyState(&scancodes[KEY_EXE]))
+		{
+			button_pressed = true;
+			
+			// do tab and specific feature
+			switch (selected_tab)
+			{
+			case TAB_INFO:
+				switch (selected_item)
+				{
+				case 0:
+					gb.direct.frame_skip = !gb.direct.frame_skip;
+					break;
+
+				case 1:
+					gb.direct.interlace = !gb.direct.interlace;
+					break;
+
+				case 2:
+					// show color palette dialog
+					
+					break;
+
+				case 3:
+					return 1;
+				
+				default:
+					break;
+				}
+				break;
+			
+			default:
+				break;
+			}
 		}
 	}
 
@@ -516,7 +580,7 @@ void display_pause_overlay()
 	LCD_Refresh();
 }
 
-void draw_emulation_menu(uint8_t selected_tab, const uint8_t tab_count)
+void draw_emulation_menu(uint8_t selected_tab, uint8_t selected_item, const uint8_t tab_count)
 {
 	const uint16_t tab_width = 80;
 	const uint16_t tab_height = 18;
@@ -526,6 +590,8 @@ void draw_emulation_menu(uint8_t selected_tab, const uint8_t tab_count)
 	const uint16_t bottom_bar_y = 528 - tab_height;
 	const uint16_t bottom_bar_bg = 0x39E7;
 	const uint16_t bottom_bar_selected = 0x04A0;
+	const uint16_t color_success = 0x07E0;
+	const uint16_t color_danger = 0xF800;
 
 	// fill menu part of screen
 	for(uint16_t y = 0; y < main_height; y++)
@@ -570,10 +636,65 @@ void draw_emulation_menu(uint8_t selected_tab, const uint8_t tab_count)
 			break;
 		}
 
-		print_string(tab_label, (tab_width * i) + ((tab_width - (strlen(tab_label) * (DEBUG_CHAR_WIDTH - 2))) / 2), 512, 0, 0xFFFF, 0x0000, 1);
+		print_string(tab_label, (tab_width * i) + ((tab_width - (strlen(tab_label) * (DEBUG_CHAR_WIDTH - 2))) / 2), 
+			512, 0, 0xFFFF, 0x0000, 1);
 	}
 
 	// draw menu contents
+	switch (selected_tab)
+	{
+	case TAB_INFO:
+		{
+			// draw rom title
+			for(uint16_t y = 0; y < 37; y++)
+			{
+				for(uint16_t x = 0; x < (LCD_WIDTH * 2); x++)
+					vram[((main_y + y) * (LCD_WIDTH * 2) + x)] = bottom_bar_selected;
+			}
+
+			char title_string[200] = " Current ROM: ";
+			char tmp_string[100];
+
+			gb_get_rom_name(&gb, tmp_string);
+			strcat(title_string, tmp_string);
+
+			print_string(title_string, 0, main_y + 4, 0, 0x0000, 0x0000, 1);
+
+			// draw rom filename
+			strcpy(title_string, " Filename: ");
+			strcat(title_string, fileNames[current_filename]);
+
+			print_string(title_string, 0, main_y + 20, 0, 0x0000, 0x0000, 1);
+
+			// draw interactive menu
+			strcpy(title_string, " Frameskipping                                        ");
+			print_string(title_string, 0, main_y + 44, 0, 0xFFFF, (selected_item == 0) * 0x8410, 1);
+
+			strcpy(title_string, (gb.direct.frame_skip)? "Enabled" : "Disabled");
+			print_string(title_string, 264 + (gb.direct.frame_skip * 3), main_y + 44, 0, 
+				(color_success * gb.direct.frame_skip) + (color_danger * !gb.direct.frame_skip), 0x0000, 1);
+
+			strcpy(title_string, " Interlacing                                          ");
+			print_string(title_string, 0, main_y + 58, 0, 0xFFFF, (selected_item == 1) * 0x8410, 1);
+
+			strcpy(title_string, (gb.direct.interlace)? "Enabled" : "Disabled");
+			print_string(title_string, 264 + (gb.direct.interlace * 3), main_y + 58, 0, 
+				(color_success * gb.direct.interlace) + (color_danger * !gb.direct.interlace), 0x0000, 1);
+
+			strcpy(title_string, " Color Palette                                        ");
+			print_string(title_string, 0, main_y + 72, 0, 0xFFFF, (selected_item == 2) * 0x8410, 1);
+
+			print_string("Default", 267, main_y + 72, 0, color_success, 0x0000, 1);
+
+			strcpy(title_string, " Quit CPBoy                                           ");
+			print_string(title_string, 0, main_y + 86, 0, 0xFFFF, (selected_item == 3) * 0x8410, 1);
+
+			break;
+		}
+	
+	default:
+		break;
+	}
 	
 	LCD_Refresh();
 }
