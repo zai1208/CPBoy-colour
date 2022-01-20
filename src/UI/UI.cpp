@@ -1,5 +1,5 @@
 #include <stdint.h>
-#include <SDK/calc/calc.hpp>
+#include <sdk/calc/calc.hpp>
 #include "UI.hpp"
 
 #define FONTBASE 0x8062F4C8
