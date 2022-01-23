@@ -49,9 +49,9 @@
 #define CP_KEY_NEGATIVE	10		
 
 #define TAB_INFO 				0
-#define TAB_SETTINGS 		1
+#define TAB_SAVESTATES 	1
 #define TAB_LOAD_ROM 		2
-#define TAB_SAVESTATES 	3
+#define TAB_SETTINGS 		3
 
 #define RGB555_TO_RGB565(rgb555) ( \
 	0 | \
@@ -355,7 +355,6 @@ void executeRom()
 				error_print("Interlace off");
 		}
 		
-
 		/* Run CPU until next frame */
 		gb_run_frame(&gb);
 
@@ -480,7 +479,6 @@ uint8_t emulation_menu()
 
 	uint8_t selected_tab = 0;
 	uint8_t selected_item = 0;
-
 
 	uint32_t key1;
 	uint32_t key2; 
