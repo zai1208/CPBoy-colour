@@ -36,17 +36,17 @@
 
 // #define MAX_ROM_SIZE 0x10000
 
-#define KEY_UP				0
-#define KEY_DOWN			1
-#define KEY_LEFT			2
-#define KEY_RIGHT			3
-#define KEY_PLUS			4
-#define KEY_SHIFT			5
-#define KEY_CLEAR			6
-#define KEY_EXE				7
-#define KEY_KEYBOARD	8		
-#define KEY_BACKSPACE	9			
-#define KEY_NEGATIVE	10		
+#define CP_KEY_UP				0
+#define CP_KEY_DOWN			1
+#define CP_KEY_LEFT			2
+#define CP_KEY_RIGHT			3
+#define CP_KEY_PLUS			4
+#define CP_KEY_SHIFT			5
+#define CP_KEY_CLEAR			6
+#define CP_KEY_EXE				7
+#define CP_KEY_KEYBOARD	8		
+#define CP_KEY_BACKSPACE	9			
+#define CP_KEY_NEGATIVE	10		
 
 #define TAB_INFO 				0
 #define TAB_SETTINGS 		1
@@ -192,21 +192,21 @@ void main()
 		
 		buttonPressed = false;
 
-		if (Input_GetKeyState(&scancodes[KEY_UP])) 
+		if (Input_GetKeyState(&scancodes[CP_KEY_UP])) 
 		{
 			buttonPressed = true;
 			menuIndex--;
 			
 			if (menuIndex < 0) menuIndex = dirFiles - 1;
 		}
-		if (Input_GetKeyState(&scancodes[KEY_DOWN])) 
+		if (Input_GetKeyState(&scancodes[CP_KEY_DOWN])) 
 		{
 			buttonPressed = true;
 			menuIndex++;
 
 			if (menuIndex >= dirFiles) menuIndex = 0;
 		}
-		if (Input_GetKeyState(&scancodes[KEY_EXE])) 
+		if (Input_GetKeyState(&scancodes[CP_KEY_EXE])) 
 		{
 			buttonPressed = true;
 			inMenu = false;
@@ -326,16 +326,16 @@ void executeRom()
 			gb_tick_rtc(&gb);
 
 		/* Handle Key Input */
-		gb.direct.joypad_bits.a = !Input_GetKeyState(&scancodes[KEY_EXE]);
-		gb.direct.joypad_bits.b = !Input_GetKeyState(&scancodes[KEY_PLUS]);
-		gb.direct.joypad_bits.select = !Input_GetKeyState(&scancodes[KEY_SHIFT]);
-		gb.direct.joypad_bits.start = !Input_GetKeyState(&scancodes[KEY_CLEAR]);
-		gb.direct.joypad_bits.up = !Input_GetKeyState(&scancodes[KEY_UP]);
-		gb.direct.joypad_bits.down = !Input_GetKeyState(&scancodes[KEY_DOWN]);
-		gb.direct.joypad_bits.left = !Input_GetKeyState(&scancodes[KEY_LEFT]);
-		gb.direct.joypad_bits.right = !Input_GetKeyState(&scancodes[KEY_RIGHT]);
+		gb.direct.joypad_bits.a = !Input_GetKeyState(&scancodes[CP_KEY_EXE]);
+		gb.direct.joypad_bits.b = !Input_GetKeyState(&scancodes[CP_KEY_PLUS]);
+		gb.direct.joypad_bits.select = !Input_GetKeyState(&scancodes[CP_KEY_SHIFT]);
+		gb.direct.joypad_bits.start = !Input_GetKeyState(&scancodes[CP_KEY_CLEAR]);
+		gb.direct.joypad_bits.up = !Input_GetKeyState(&scancodes[CP_KEY_UP]);
+		gb.direct.joypad_bits.down = !Input_GetKeyState(&scancodes[CP_KEY_DOWN]);
+		gb.direct.joypad_bits.left = !Input_GetKeyState(&scancodes[CP_KEY_LEFT]);
+		gb.direct.joypad_bits.right = !Input_GetKeyState(&scancodes[CP_KEY_RIGHT]);
 
-		if(Input_GetKeyState(&scancodes[KEY_KEYBOARD]))
+		if(Input_GetKeyState(&scancodes[CP_KEY_KEYBOARD]))
 		{
 			gb.direct.frame_skip = !gb.direct.frame_skip;
 
@@ -345,7 +345,7 @@ void executeRom()
 				error_print("Frameskip off");
 		}
 
-		if(Input_GetKeyState(&scancodes[KEY_BACKSPACE]))
+		if(Input_GetKeyState(&scancodes[CP_KEY_BACKSPACE]))
 		{
 			gb.direct.interlace = !gb.direct.interlace;
 
@@ -368,10 +368,7 @@ void executeRom()
 				continue;
 		}
 
-		// if(Input_GetKeyState(&scancodes[KEY_NEGATIVE]))
-		// 	return;
-
-		if(Input_GetKeyState(&scancodes[KEY_NEGATIVE]))
+		if(Input_GetKeyState(&scancodes[CP_KEY_NEGATIVE]))
 		{
 			if(emulation_menu())
 				return;
@@ -484,23 +481,35 @@ uint8_t emulation_menu()
 	uint8_t selected_tab = 0;
 	uint8_t selected_item = 0;
 
+
+	uint32_t key1;
+	uint32_t key2; 
+
 	while(in_menu)
 	{
 		draw_emulation_menu(selected_tab, selected_item, tab_count);
 
-		while(Input_IsAnyKeyDown() && button_pressed) { }
+		while(button_pressed) 
+		{ 
+			getKey(&key1, &key2);
+
+			if(!(key1 | key2))
+				button_pressed = false;
+		}
 		
 		button_pressed = false;
 
+		getKey(&key1, &key2);
+
 		// handle controls
-		if(Input_GetKeyState(&scancodes[KEY_NEGATIVE]))
+		if(testKey(key1, key2, KEY_NEGATIVE))
 		{
 			while(Input_IsAnyKeyDown()) { }
 
 			return 0;
 		}
 
-		if(Input_GetKeyState(&scancodes[KEY_RIGHT]))
+		if(testKey(key1, key2, KEY_RIGHT))
 		{
 			button_pressed = true;
 
@@ -511,7 +520,7 @@ uint8_t emulation_menu()
 			}
 		}
 		
-		if(Input_GetKeyState(&scancodes[KEY_LEFT]))
+		if(testKey(key1, key2, KEY_LEFT))
 		{
 			button_pressed = true;
 
@@ -522,7 +531,7 @@ uint8_t emulation_menu()
 			}
 		}
 		
-		if(Input_GetKeyState(&scancodes[KEY_UP]))
+		if(testKey(key1, key2, KEY_UP))
 		{
 			button_pressed = true;
 
@@ -530,7 +539,7 @@ uint8_t emulation_menu()
 				selected_item--;
 		}
 		
-		if(Input_GetKeyState(&scancodes[KEY_DOWN]))
+		if(testKey(key1, key2, KEY_DOWN))
 		{
 			button_pressed = true;
 
@@ -538,7 +547,7 @@ uint8_t emulation_menu()
 				selected_item++;
 		}
 		
-		if(Input_GetKeyState(&scancodes[KEY_EXE]))
+		if(testKey(key1, key2, KEY_EXE))
 		{
 			button_pressed = true;
 			
