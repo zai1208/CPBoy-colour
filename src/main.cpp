@@ -53,6 +53,13 @@
 #define TAB_LOAD_ROM 		2
 #define TAB_SAVESTATES 	3
 
+#define RGB555_TO_RGB565(rgb555) ( \
+	0 | \
+	((rgb555 & 0b0111110000000000) <<1) | \
+	((rgb555 & 0b0000001111100000) <<1) | \
+	(rgb555 & 0b0000000000011111) \
+)
+
 /*
  * Fill this section in with some information about your app.
  * All fields are optional - so if you don't need one, take it out.
@@ -80,6 +87,8 @@ uint8_t initEmulator();
 uint8_t emulation_menu();
 void display_pause_overlay();
 void draw_emulation_menu(uint8_t selected_tab, uint8_t selected_item, const uint8_t tab_count);
+void load_palettes();
+bool get_game_palette(uint8_t game_checksum, uint16_t (*game_palette)[4]);
 void *memcpy(void *dest, const void *src, size_t count);
 
 InputScancode scancodes[] = 
@@ -104,8 +113,8 @@ struct priv_t
 	/* Pointer to allocated memory holding save file. */
 	uint8_t *cart_ram;
 
-	/* Colour palette for each BG, OBJ0, and OBJ1. */
-	uint16_t selected_palette[3][4];
+	/* Pointer to colour palette for each BG, OBJ0, and OBJ1. */
+	uint16_t (*selected_palette)[4];
 };
 
 struct gb_s gb;
@@ -115,9 +124,29 @@ struct priv_t priv =
 	.cart_ram = NULL
 };
 
+struct palette
+{
+	/* The name of the palette */
+	char name[20];
+
+	/* The actual content of the palette */
+	uint16_t data[3][4];
+};
+
+const uint16_t default_palette[3][4] = 
+{
+	{ 0x7FFF, 0x5294, 0x294A, 0x0000 },
+	{ 0x7FFF, 0x5294, 0x294A, 0x0000 },
+	{ 0x7FFF, 0x5294, 0x294A, 0x0000 }
+};
+
+struct palette *color_palettes;
+
 // get the roms in the roms folder
 char fileNames[64][100];
 
+uint8_t palette_count = 0;
+uint8_t current_palette = 0;
 uint8_t current_filename = 0;
 
 int dirFiles = 0;
@@ -219,6 +248,7 @@ void main()
 
 	free(priv.cart_ram);
 	free(priv.rom);
+	free(color_palettes);
 
 	calcEnd();
 }
@@ -272,13 +302,10 @@ uint8_t initEmulator()
 	/* Initialise lcd stuff */
 	gb_init_lcd(&gb, &lcd_draw_line);
 
-	const uint16_t palette[3][4] =
-	{
-		{ 0x7FFF, 0x5294, 0x294A, 0x0000 },
-		{ 0x7FFF, 0x5294, 0x294A, 0x0000 },
-		{ 0x7FFF, 0x5294, 0x294A, 0x0000 }
-	};
-	memcpy(priv.selected_palette, palette, sizeof(palette));
+	load_palettes();
+
+	// load default palette
+	priv.selected_palette = color_palettes[0].data;
 
 	// LCD_ClearScreen();
 	Debug_Printf(0, 0, false, 0, "Init complete");
@@ -522,16 +549,23 @@ uint8_t emulation_menu()
 				switch (selected_item)
 				{
 				case 0:
+					// toggle frameskipping
 					gb.direct.frame_skip = !gb.direct.frame_skip;
 					break;
 
 				case 1:
+					// toggle interlacing
 					gb.direct.interlace = !gb.direct.interlace;
 					break;
 
 				case 2:
-					// show color palette dialog
-					
+					// switch color palette
+					current_palette++;
+
+					if(current_palette >= palette_count)
+						current_palette = 0;
+
+					priv.selected_palette = color_palettes[current_palette].data;
 					break;
 
 				case 3:
@@ -684,7 +718,8 @@ void draw_emulation_menu(uint8_t selected_tab, uint8_t selected_item, const uint
 			strcpy(title_string, " Color Palette                                        ");
 			print_string(title_string, 0, main_y + 72, 0, 0xFFFF, (selected_item == 2) * 0x8410, 1);
 
-			print_string("Default", 267, main_y + 72, 0, color_success, 0x0000, 1);
+			print_string(color_palettes[current_palette].name, 312 - (strlen(color_palettes[current_palette].name) * 6),
+			 	main_y + 72, 0, color_success, 0x0000, 1);
 
 			strcpy(title_string, " Quit CPBoy                                           ");
 			print_string(title_string, 0, main_y + 86, 0, 0xFFFF, (selected_item == 3) * 0x8410, 1);
@@ -697,6 +732,208 @@ void draw_emulation_menu(uint8_t selected_tab, uint8_t selected_item, const uint
 	}
 	
 	LCD_Refresh();
+}
+
+int8_t show_palette_dialog()
+{
+	LCD_VRAMBackup();
+
+	
+
+	LCD_VRAMRestore();
+}
+
+void load_palettes()
+{
+	char title[25];
+
+	if(palette_count != 0)
+		free(color_palettes);
+
+	// check if gamepalette exists
+	uint16_t game_palette[3][4];
+	
+	bool game_palette_exists = get_game_palette(gb_colour_hash(&gb), game_palette);
+
+	palette_count = 1 + game_palette_exists;
+
+	color_palettes = new struct palette[palette_count];
+
+	// Init default palette
+	strcpy(color_palettes[0].name, "Default");
+	memcpy(color_palettes[0].data, default_palette, sizeof(default_palette));
+
+	// Add game default palette if it exists
+	if(!game_palette_exists)
+		return;
+		
+	gb_get_rom_name(&gb, title);
+	strcat(title, " Palette");
+
+	strcpy(color_palettes[1].name, title);
+	memcpy(color_palettes[1].data, game_palette, sizeof(game_palette));
+
+	// TODO: load custom palettes
+}
+
+bool get_game_palette(uint8_t game_checksum, uint16_t (*game_palette)[4])
+{
+	/* Palettes by deltabeard from the PeanutGB SDL example */
+	switch(game_checksum)
+	{
+		/* Balloon Kid and Tetris Blast */
+		case 0x71:
+		case 0xFF:
+		{
+			const uint16_t palette[3][4] =
+			{
+				{ RGB555_TO_RGB565(0x7FFF), RGB555_TO_RGB565(0x7E60), RGB555_TO_RGB565(0x7C00), 0x0000 }, /* OBJ0 */
+				{ RGB555_TO_RGB565(0x7FFF), RGB555_TO_RGB565(0x7E60), RGB555_TO_RGB565(0x7C00), 0x0000 }, /* OBJ1 */
+				{ RGB555_TO_RGB565(0x7FFF), RGB555_TO_RGB565(0x7E60), RGB555_TO_RGB565(0x7C00), 0x0000 }  /* BG */
+			};
+			memcpy(game_palette, palette, sizeof(palette));
+			return 1;
+		}
+
+		/* Pokemon Yellow and Tetris */
+		case 0x15:
+		case 0xDB:
+		case 0x95: /* Not officially */
+		{
+			const uint16_t palette[3][4] =
+			{
+				{ RGB555_TO_RGB565(0x7FFF), RGB555_TO_RGB565(0x7FE0), RGB555_TO_RGB565(0x7C00), 0x0000 }, /* OBJ0 */
+				{ RGB555_TO_RGB565(0x7FFF), RGB555_TO_RGB565(0x7FE0), RGB555_TO_RGB565(0x7C00), 0x0000 }, /* OBJ1 */
+				{ RGB555_TO_RGB565(0x7FFF), RGB555_TO_RGB565(0x7FE0), RGB555_TO_RGB565(0x7C00), 0x0000 }  /* BG */
+			};
+			memcpy(game_palette, palette, sizeof(palette));
+			return 1;
+		}
+
+		/* Donkey Kong */
+		case 0x19:
+		{
+			const uint16_t palette[3][4] =
+			{
+				{ RGB555_TO_RGB565(0x7FFF), RGB555_TO_RGB565(0x7E10), RGB555_TO_RGB565(0x48E7), 0x0000 }, /* OBJ0 */
+				{ RGB555_TO_RGB565(0x7FFF), RGB555_TO_RGB565(0x7E10), RGB555_TO_RGB565(0x48E7), 0x0000 }, /* OBJ1 */
+				{ RGB555_TO_RGB565(0x7FFF), RGB555_TO_RGB565(0x7E60), RGB555_TO_RGB565(0x7C00), 0x0000 }  /* BG */
+			};
+			memcpy(game_palette, palette, sizeof(palette));
+			return 1;
+		}
+
+		/* Pokemon Blue */
+		case 0x61:
+		case 0x45:
+
+		/* Pokemon Blue Star */
+		case 0xD8:
+		{
+			const uint16_t palette[3][4] =
+			{
+				{ RGB555_TO_RGB565(0x7FFF), RGB555_TO_RGB565(0x7E10), RGB555_TO_RGB565(0x48E7), 0x0000 }, /* OBJ0 */
+				{ RGB555_TO_RGB565(0x7FFF), RGB555_TO_RGB565(0x329F), RGB555_TO_RGB565(0x001F), 0x0000 }, /* OBJ1 */
+				{ RGB555_TO_RGB565(0x7FFF), RGB555_TO_RGB565(0x329F), RGB555_TO_RGB565(0x001F), 0x0000 }  /* BG */
+			};
+			memcpy(game_palette, palette, sizeof(palette));
+			return 1;
+		}
+
+		/* Pokemon Red */
+		case 0x14:
+		{
+			const uint16_t palette[3][4] =
+			{
+				{ RGB555_TO_RGB565(0x7FFF), RGB555_TO_RGB565(0x3FE6), RGB555_TO_RGB565(0x0200), 0x0000 }, /* OBJ0 */
+				{ RGB555_TO_RGB565(0x7FFF), RGB555_TO_RGB565(0x7E10), RGB555_TO_RGB565(0x48E7), 0x0000 }, /* OBJ1 */
+				{ RGB555_TO_RGB565(0x7FFF), RGB555_TO_RGB565(0x7E10), RGB555_TO_RGB565(0x48E7), 0x0000 }  /* BG */
+			};
+			memcpy(game_palette, palette, sizeof(palette));
+			return 1;
+		}
+
+		/* Pokemon Red Star */
+		case 0x8B:
+		{
+			const uint16_t palette[3][4] =
+			{
+				{ RGB555_TO_RGB565(0x7FFF), RGB555_TO_RGB565(0x7E10), RGB555_TO_RGB565(0x48E7), 0x0000 }, /* OBJ0 */
+				{ RGB555_TO_RGB565(0x7FFF), RGB555_TO_RGB565(0x329F), RGB555_TO_RGB565(0x001F), 0x0000 }, /* OBJ1 */
+				{ RGB555_TO_RGB565(0x7FFF), RGB555_TO_RGB565(0x3FE6), RGB555_TO_RGB565(0x0200), 0x0000 }  /* BG */
+			};
+			memcpy(game_palette, palette, sizeof(palette));
+			return 1;
+		}
+
+		/* Kirby */
+		case 0x27:
+		case 0x49:
+		case 0x5C:
+		case 0xB3:
+		{
+			const uint16_t palette[3][4] =
+			{
+				{ RGB555_TO_RGB565(0x7D8A), RGB555_TO_RGB565(0x6800), RGB555_TO_RGB565(0x3000), RGB555_TO_RGB565(0x0000) }, /* OBJ0 */
+				{ RGB555_TO_RGB565(0x001F), RGB555_TO_RGB565(0x7FFF), RGB555_TO_RGB565(0x7FEF), RGB555_TO_RGB565(0x021F) }, /* OBJ1 */
+				{ RGB555_TO_RGB565(0x527F), RGB555_TO_RGB565(0x7FE0), RGB555_TO_RGB565(0x0180), RGB555_TO_RGB565(0x0000) }  /* BG */
+			};
+			memcpy(game_palette, palette, sizeof(palette));
+			return 1;
+		}
+
+		/* Donkey Kong Land [1/2/III] */
+		case 0x18:
+		case 0x6A:
+		case 0x4B:
+		case 0x6B:
+		{
+			const uint16_t palette[3][4] =
+			{
+				{ RGB555_TO_RGB565(0x7F08), RGB555_TO_RGB565(0x7F40), RGB555_TO_RGB565(0x48E0), RGB555_TO_RGB565(0x2400) }, /* OBJ0 */
+				{ RGB555_TO_RGB565(0x7FFF), RGB555_TO_RGB565(0x2EFF), RGB555_TO_RGB565(0x7C00), RGB555_TO_RGB565(0x001F) }, /* OBJ1 */
+				{ RGB555_TO_RGB565(0x7FFF), RGB555_TO_RGB565(0x463B), RGB555_TO_RGB565(0x2951), RGB555_TO_RGB565(0x0000) }  /* BG */
+			};
+			memcpy(game_palette, palette, sizeof(palette));
+			return 1;
+		}
+
+		/* Link's Awakening */
+		case 0x70:
+		{
+			const uint16_t palette[3][4] =
+			{
+				{ RGB555_TO_RGB565(0x7FFF), RGB555_TO_RGB565(0x03E0), RGB555_TO_RGB565(0x1A00), RGB555_TO_RGB565(0x0120) }, /* OBJ0 */
+				{ RGB555_TO_RGB565(0x7FFF), RGB555_TO_RGB565(0x329F), RGB555_TO_RGB565(0x001F), RGB555_TO_RGB565(0x001F) }, /* OBJ1 */
+				{ RGB555_TO_RGB565(0x7FFF), RGB555_TO_RGB565(0x7E10), RGB555_TO_RGB565(0x48E7), RGB555_TO_RGB565(0x0000) }  /* BG */
+			};
+			memcpy(game_palette, palette, sizeof(palette));
+			return 1;
+		}
+
+		/* Mega Man [1/2/3] & others I don't care about. */
+		case 0x01:
+		case 0x10:
+		case 0x29:
+		case 0x52:
+		case 0x5D:
+		case 0x68:
+		case 0x6D:
+		case 0xF6:
+		{
+			const uint16_t palette[3][4] =
+			{
+				{ RGB555_TO_RGB565(0x7FFF), RGB555_TO_RGB565(0x329F), RGB555_TO_RGB565(0x001F), 0x0000 }, /* OBJ0 */
+				{ RGB555_TO_RGB565(0x7FFF), RGB555_TO_RGB565(0x3FE6), RGB555_TO_RGB565(0x0200), 0x0000 }, /* OBJ1 */
+				{ RGB555_TO_RGB565(0x7FFF), RGB555_TO_RGB565(0x7EAC), RGB555_TO_RGB565(0x40C0), 0x0000 }  /* BG */
+			};
+			memcpy(game_palette, palette, sizeof(palette));
+			return 1;
+		}
+
+		default:
+			return 0;
+	}
 }
 
 /**
