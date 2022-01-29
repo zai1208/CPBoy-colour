@@ -87,7 +87,13 @@ uint8_t initEmulator();
 uint8_t emulation_menu();
 void display_pause_overlay();
 void draw_emulation_menu(uint8_t selected_tab, uint8_t selected_item, const uint8_t tab_count);
+void show_palette_dialog();
 void load_palettes();
+void create_palette(char *palette_name);
+void convert_byte_to_string(uint8_t byte, char *string);
+uint8_t convert_string_to_byte(char *string); 
+int8_t save_palette(struct palette *palette);
+void delete_palette(struct palette *palette);
 bool get_game_palette(uint8_t game_checksum, uint16_t (*game_palette)[4]);
 void *memcpy(void *dest, const void *src, size_t count);
 
@@ -140,14 +146,16 @@ const uint16_t default_palette[3][4] =
 	{ 0x7FFF, 0x5294, 0x294A, 0x0000 }
 };
 
-struct palette *color_palettes;
+struct palette *color_palettes = NULL;
 
 // get the roms in the roms folder
 char fileNames[64][100];
 
-uint8_t palette_count = 0;
-uint8_t current_palette = 0;
-uint8_t current_filename = 0;
+uint8_t palette_count;
+uint8_t current_palette;
+uint8_t current_filename;
+
+bool game_palette_exists;
 
 int dirFiles = 0;
 
@@ -165,6 +173,10 @@ void main()
 
 	// make save directory
 	mkdir("\\fls0\\gb-saves");
+
+	// init palette stuff
+	color_palettes = NULL;
+	current_palette = 0;
 
 	findFiles();
 
@@ -475,7 +487,7 @@ uint8_t emulation_menu()
 	bool in_menu = true;
 	bool button_pressed = true;
 
-	uint8_t item_counts[tab_count] = { 4, 1, 1, 1 };
+	uint8_t item_counts[tab_count] = { 4, 1, 1, 2 };
 
 	uint8_t selected_tab = 0;
 	uint8_t selected_item = 0;
@@ -577,6 +589,17 @@ uint8_t emulation_menu()
 
 				case 3:
 					return 1;
+				
+				default:
+					break;
+				}
+				break;
+			case TAB_SETTINGS:
+				switch (selected_item)
+				{
+				case 0:
+					show_palette_dialog();
+					break;
 				
 				default:
 					break;
@@ -733,7 +756,28 @@ void draw_emulation_menu(uint8_t selected_tab, uint8_t selected_item, const uint
 
 			break;
 		}
-	
+	case TAB_SETTINGS:
+		{
+			char title_string[200];
+
+			// draw settings title
+			for(uint16_t y = 0; y < 37; y++)
+			{
+				for(uint16_t x = 0; x < (LCD_WIDTH * 2); x++)
+					vram[((main_y + y) * (LCD_WIDTH * 2) + x)] = bottom_bar_selected;
+			}
+
+			print_string(" Global Settings", 0, main_y + 12, 0, 0x0000, 0x0000, 1);
+
+			// draw interactive menu
+			strcpy(title_string, " Custom Color Palettes                                ");
+			print_string(title_string, 0, main_y + 44, 0, 0xFFFF, (selected_item == 0) * 0x8410, 1);
+
+			strcpy(title_string, " Controls                                             ");
+			print_string(title_string, 0, main_y + 58, 0, 0xFFFF, (selected_item == 1) * 0x8410, 1);
+
+			break;
+		}
 	default:
 		break;
 	}
@@ -741,46 +785,370 @@ void draw_emulation_menu(uint8_t selected_tab, uint8_t selected_item, const uint
 	LCD_Refresh();
 }
 
-int8_t show_palette_dialog()
+void show_palette_dialog()
 {
 	LCD_VRAMBackup();
+		
+	const uint16_t subtitle_fg = 0xB5B6;
+	const uint16_t dialog_width = 200;
+	const uint16_t dialog_border = 0x04A0;
+	const uint16_t dialog_bg = 0x2104;
 
+	uint8_t selected_item = 0;
+
+	uint32_t key1;
+	uint32_t key2;
+
+	bool button_pressed = true;
+	bool in_menu = true;
+
+	while (in_menu)
+	{
+		const uint8_t custom_palette_count = palette_count - 1 - game_palette_exists;
+
+		const uint16_t dialog_height = 112 + (((custom_palette_count)? custom_palette_count : 1) * 14);
+		const uint16_t dialog_y = (528 - dialog_height) / 2;
+		const uint16_t dialog_x = (320 - dialog_width) / 2;
+
+		// draw dialog background
+		for (uint16_t y = 0; y < dialog_height; y++)
+		{
+			for (uint16_t x = 0; x < dialog_width; x++)
+			{
+				if(y == 0 || y == (dialog_height - 1) || x == 0 || x == (dialog_width - 1))
+					vram[((y + dialog_y) * (LCD_WIDTH * 2)) + x + dialog_x] = dialog_border;
+				else
+					vram[((y + dialog_y) * (LCD_WIDTH * 2)) + x + dialog_x] = dialog_bg;
+			}
+		}
+
+		// draw title
+		print_string("Custom Color Palettes", 96, dialog_y + 5, 0, dialog_border, 0x0000, 1);
+
+		// draw subtitle
+		print_string("[EXE] to edit", 120, dialog_y + 23, 0, subtitle_fg, 0x0000, 1);
+		print_string("[CLEAR] to remove", 108, dialog_y + 37, 0, subtitle_fg, 0x0000, 1);
+
+		// draw all palettes
+		uint8_t custom_offset = 1 + game_palette_exists;
+
+		for (uint8_t i = 0; i < custom_palette_count; i++)
+		{
+			print_string(color_palettes[custom_offset + i].name, (320 - (strlen(color_palettes[custom_offset + i].name) * 6)) / 2, 
+				dialog_y + 65 + (i * 14), 0, 0xFFFF, (selected_item == i) * 0x8410, 1);
+		}		
+
+		// draw no palettes alert if there are no palettes
+		if(!custom_palette_count)
+			print_string("No custom palettes", 105, dialog_y + 65, 0, dialog_border, 0x0000, 1);
+
+		// draw action buttons
+		print_string(" Create Palette ", 111, dialog_y + (((custom_palette_count)? custom_palette_count : 1) * 14) + 79, 0, 
+			0xFFFF, (selected_item == custom_palette_count) * 0x8410, 1);
+		print_string("      Done      ", 111, dialog_y + (((custom_palette_count)? custom_palette_count : 1) * 14) + 93, 0, 
+			0xFFFF, (selected_item == (custom_palette_count + 1)) * 0x8410, 1);
+
+		LCD_Refresh();
+
+		// handle input
+		while(button_pressed) 
+		{ 
+			getKey(&key1, &key2);
+
+			if(!(key1 | key2))
+				button_pressed = false;
+		}
+		
+		button_pressed = false;
+
+		getKey(&key1, &key2);
+
+		// handle controls		
+		if(testKey(key1, key2, KEY_UP))
+		{
+			button_pressed = true;
+
+			if(selected_item != 0)
+				selected_item--;
+		}
+		
+		if(testKey(key1, key2, KEY_DOWN))
+		{
+			button_pressed = true;
+
+			if(selected_item != (custom_palette_count + 1))
+				selected_item++;
+		}
+		
+		if(testKey(key1, key2, KEY_EXE))
+		{
+			button_pressed = true;
+
+			if(selected_item == (custom_palette_count + 1))
+			{
+				in_menu = false; // close color palette menu
+			}
+			else if(selected_item == (custom_palette_count))
+			{
+				// create new palette
+				char palette_name[100] = "Custom ";
+				char number[4];
+
+				uint8_t lowest = 0;
+
+				// get current lowest number
+				for(uint8_t i = 0; i < custom_palette_count; i++)
+				{
+					uint8_t current_number = convert_string_to_byte(color_palettes[i + custom_offset].name + sizeof("Custom ") - 1);
+
+					// Debug_Printf(0, 8, 0, 0, color_palettes[i + custom_offset].name + sizeof("Custom ") - 1);
+					// Debug_Printf(0, 9, 0, 0, color_palettes[i + custom_offset].name);
+
+					if(lowest == current_number)
+					{
+						lowest++;
+						i = 255; 	// restart for loop
+					}
+
+					// Debug_Printf(0, 10, 0, 0, "Current: %d; Lowest: %d; i: %d", current_number, lowest, i);
+
+					// for (uint8_t i = 0; i < 60; i++)
+					// 	LCD_Refresh();
+				}
+
+				convert_byte_to_string(lowest, number);
+				strcat(palette_name, number);
+				
+				create_palette(palette_name);
+				load_palettes();
+			}
+			else
+			{
+				// TODO: show edit palette menu
+			}
+		}
+
+		if(testKey(key1, key2, KEY_CLEAR))
+		{
+			button_pressed = true;
+
+			// delete palette
+			delete_palette(&color_palettes[custom_offset + selected_item]);
+			load_palettes();
+		}
+	}
 	
-
 	LCD_VRAMRestore();
 }
 
-void load_palettes()
+void convert_byte_to_string(uint8_t byte, char *string)
 {
+	string[0] = (byte / 100) + '0';
+	string[1] = ((byte % 100) / 10) + '0';
+	string[2] = (byte % 10) + '0';
+	string[3] = 0;
+
+	if(byte < 10)
+	{
+		string[0] = string[2];	
+		string[1] = 0;	
+	}
+	else if(byte < 100)
+	{
+		string[0] = string[1];	
+		string[1] = string[2];	
+		string[2] = 0;	
+	}
+}
+
+uint8_t convert_string_to_byte(char *string)
+{
+	uint8_t byte = 0;
+	uint8_t len = strlen(string);
+
+	for(uint8_t i = 0; i < len; i++)
+		byte = (byte * 10) + (string[i] - '0');
+
+	return byte;
+}
+
+void create_palette(char *palette_name)
+{
+	// Debug_Printf(0, 4, 0, 0, "Creating palette");
+	// for (uint8_t i = 0; i < 60; i++)
+	// 	LCD_Refresh();
+
+	struct palette new_palette;
+	strcpy(new_palette.name, palette_name);
+	memcpy(new_palette.data, default_palette, sizeof(default_palette));
+
+	// Debug_Printf(0, 0, 0, 0, "Saving palette");
+	// for (uint8_t i = 0; i < 60; i++)
+	// 	LCD_Refresh();
+	save_palette(&new_palette);
+}
+
+void delete_palette(struct palette *palette)
+{
+	char palette_path[200] = "\\fls0\\CPBoy\\palettes\\";
+	strcat(palette_path, palette->name);
+	strcat(palette_path, ".gbcp");
+
+	remove(palette_path);
+}
+
+int8_t save_palette(struct palette *palette)
+{
+	// Debug_Printf(0, 1, 0, 0, "Started saving");
+	// for (uint8_t i = 0; i < 60; i++)
+	// 	LCD_Refresh();
+
+	// make necessary directories
+	mkdir("\\fls0\\CPBoy");
+	mkdir("\\fls0\\CPBoy\\palettes");
+
+	// Debug_Printf(0, 2, 0, 0, "Made directories");
+	// for (uint8_t i = 0; i < 60; i++)
+	// 	LCD_Refresh();
+
+	char palette_path[200] = "\\fls0\\CPBoy\\palettes\\";
+	strcat(palette_path, palette->name);
+	strcat(palette_path, ".gbcp");
+
+	// Debug_Printf(0, 3, 0, 0, palette_path);
+	// for (uint8_t i = 0; i < 60; i++)
+	// 	LCD_Refresh();
+	
+	int palette_file = open(palette_path, OPEN_CREATE | OPEN_WRITE);
+
+	// Debug_Printf(0, 4, 0, 0, "Opened file");
+	// for (uint8_t i = 0; i < 60; i++)
+	// 	LCD_Refresh();
+	
+	if(palette_file < 0)
+		return -1;
+
+	// Debug_Printf(0, 5, 0, 0, "Open success");
+	// for (uint8_t i = 0; i < 60; i++)
+	// 	LCD_Refresh();
+	
+	if(write(palette_file, palette, sizeof(struct palette)) < 0)
+	{
+		close(palette_file);
+		return -1;
+	}
+	// Debug_Printf(0, 6, 0, 0, "Close file");
+	// for (uint8_t i = 0; i < 60; i++)
+	// 	LCD_Refresh();
+
+	close(palette_file);
+
+	return 0;
+}
+
+void load_palettes()
+{	
 	char title[25];
 
-	if(palette_count != 0)
+	if(color_palettes != NULL)
 		free(color_palettes);
 
 	// check if gamepalette exists
 	uint16_t game_palette[3][4];
 	
-	bool game_palette_exists = get_game_palette(gb_colour_hash(&gb), game_palette);
+	game_palette_exists = get_game_palette(gb_colour_hash(&gb), game_palette);
 
 	palette_count = 1 + game_palette_exists;
 
-	color_palettes = new struct palette[palette_count];
+	// get custom palette count
+	const char palette_path[] = "\\fls0\\CPBoy\\palettes\\*.gbcp";
+	wchar_t w_palette_path[sizeof(palette_path)];
+
+	memset(w_palette_path, 0, sizeof(w_palette_path));
+	
+	for(uint8_t i = 0; palette_path[i] != 0; i++)
+	{
+		wchar_t ch = palette_path[i];
+		w_palette_path[i] = ch;
+	}
+
+	wchar_t file_name[100];
+	struct findInfo find_info;
+	int find_handle;
+	int ret = findFirst(w_palette_path, &find_handle, file_name, &find_info);
+
+	// get file count
+	while(ret >= 0) 
+	{
+		palette_count++;
+
+		//serch next
+		ret = findNext(find_handle, file_name, &find_info);
+	}
+
+	findClose(find_handle);
+
+	color_palettes = (struct palette *)malloc(sizeof(struct palette) * palette_count);
 
 	// Init default palette
 	strcpy(color_palettes[0].name, "Default");
 	memcpy(color_palettes[0].data, default_palette, sizeof(default_palette));
 
 	// Add game default palette if it exists
-	if(!game_palette_exists)
-		return;
-		
-	gb_get_rom_name(&gb, title);
-	strcat(title, " Palette");
+	if(game_palette_exists)
+	{		
+		gb_get_rom_name(&gb, title);
+		strcat(title, " Palette");
 
-	strcpy(color_palettes[1].name, title);
-	memcpy(color_palettes[1].data, game_palette, sizeof(game_palette));
+		strcpy(color_palettes[1].name, title);
+		memcpy(color_palettes[1].data, game_palette, sizeof(game_palette));
+	}
 
-	// TODO: load custom palettes
+	// load custom palettes
+	uint8_t palette_id = 1 + game_palette_exists;
+
+	ret = findFirst(w_palette_path, &find_handle, file_name, &find_info);
+
+	while(ret >= 0) 
+	{
+		char palette_file[200] = "\\fls0\\CPBoy\\palettes\\";
+		char temp[100];
+		uint8_t file_name_size = 0;
+
+		//copy file name
+		for(uint8_t i = 0; file_name[i] != 0; i++) 
+		{
+			wchar_t ch = file_name[i];
+			temp[i] = ch;
+
+			file_name_size++;
+		}
+
+		temp[file_name_size] = 0;
+
+		strcat(palette_file, temp);
+
+		// load this palette
+		int f = open(palette_file, OPEN_READ);
+
+		if(f >= 0)
+		{
+			read(f, &color_palettes[palette_id], sizeof(struct palette));
+			close(f);
+		}
+		else
+		{
+			Debug_Printf(0, 1, 0, 0, "open() returned: %d", f);
+			LCD_Refresh();			
+		}
+
+		//serch next
+		ret = findNext(find_handle, file_name, &find_info);
+
+		palette_id++;
+	}
+
+	findClose(find_handle);
 }
 
 bool get_game_palette(uint8_t game_checksum, uint16_t (*game_palette)[4])
