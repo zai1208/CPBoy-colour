@@ -787,8 +787,15 @@ void draw_emulation_menu(uint8_t selected_tab, uint8_t selected_item, const uint
 
 void show_palette_dialog()
 {
-	LCD_VRAMBackup();
-		
+	uint16_t lcd_bak[528][320];
+
+	// backup lcd
+	for(uint16_t y = 0; y < 528; y++)
+	{
+		for(uint16_t x = 0; x < 320; x++)
+			lcd_bak[y][x] = vram[(y * 320) + x];
+	}
+	
 	const uint16_t subtitle_fg = 0xB5B6;
 	const uint16_t dialog_width = 200;
 	const uint16_t dialog_border = 0x04A0;
@@ -935,10 +942,22 @@ void show_palette_dialog()
 			// delete palette
 			delete_palette(&color_palettes[custom_offset + selected_item]);
 			load_palettes();
+
+			// restore lcd
+			for(uint16_t y = 0; y < 528; y++)
+			{
+				for(uint16_t x = 0; x < 320; x++)
+					vram[(y * 320) + x] = lcd_bak[y][x];
+			}
 		}
 	}
-	
-	LCD_VRAMRestore();
+
+	// restore lcd
+	for(uint16_t y = 0; y < 528; y++)
+	{
+		for(uint16_t x = 0; x < 320; x++)
+			vram[(y * 320) + x] = lcd_bak[y][x];
+	}
 }
 
 void convert_byte_to_string(uint8_t byte, char *string)
