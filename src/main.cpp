@@ -407,7 +407,7 @@ uint8_t *read_rom_to_ram(const char *file_name)
 	fstat(rom_file, &rom_file_stat);
 
 	// dynamically allocate space for rom in heap
-	uint8_t *rom = new uint8_t[rom_file_stat.fileSize];
+	uint8_t *rom = (uint8_t *)malloc(rom_file_stat.fileSize);
 
 	// check if pointer to rom is no nullptr
 	if(!rom)
@@ -468,7 +468,7 @@ uint8_t read_cart_ram_file(const char *save_file_name, uint8_t **dest,
 	}
 
 	/* Allocate enough memory to hold save file. */
-	*dest = new uint8_t[len];
+	*dest = (uint8_t *)malloc(len);
 
 	if(!*dest)
 		return 1;
