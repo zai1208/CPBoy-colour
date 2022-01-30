@@ -88,6 +88,13 @@ uint8_t emulation_menu();
 void display_pause_overlay();
 void draw_emulation_menu(uint8_t selected_tab, uint8_t selected_item, const uint8_t tab_count);
 void show_palette_dialog();
+void show_edit_palette_dialog(struct palette *palette);
+void draw_color_edit_panel(uint16_t x, uint16_t y, uint16_t width, uint8_t selected_color_rect, 
+	char *title, uint16_t *colors, int8_t selected_item);
+void draw_slider(uint16_t x, uint16_t y, uint16_t width, uint16_t track_color,
+	uint16_t handle_color, uint16_t max_value, uint16_t value);
+void draw_rectangle(uint16_t x, uint16_t y, uint16_t width, uint16_t height,
+	uint16_t color, uint16_t border, uint16_t border_color);
 void load_palettes();
 void create_palette(char *palette_name);
 void convert_byte_to_string(uint8_t byte, char *string);
@@ -857,7 +864,7 @@ void show_palette_dialog()
 
 		LCD_Refresh();
 
-		// handle input
+		// Wait for release
 		while(button_pressed) 
 		{ 
 			getKey(&key1, &key2);
@@ -865,8 +872,6 @@ void show_palette_dialog()
 			if(!(key1 | key2))
 				button_pressed = false;
 		}
-		
-		button_pressed = false;
 
 		getKey(&key1, &key2);
 
@@ -931,7 +936,16 @@ void show_palette_dialog()
 			}
 			else
 			{
-				// TODO: show edit palette menu
+				// edit palette
+				show_edit_palette_dialog(&color_palettes[custom_offset + selected_item]);
+				save_palette(&color_palettes[custom_offset + selected_item]);
+
+				// restore lcd
+				for(uint16_t y = 0; y < 528; y++)
+				{
+					for(uint16_t x = 0; x < 320; x++)
+						vram[(y * 320) + x] = lcd_bak[y][x];
+				}
 			}
 		}
 
@@ -958,6 +972,334 @@ void show_palette_dialog()
 		for(uint16_t x = 0; x < 320; x++)
 			vram[(y * 320) + x] = lcd_bak[y][x];
 	}
+}
+
+void show_edit_palette_dialog(struct palette *palette_to_edit)
+{
+	const uint16_t dialog_width = 204;
+	const uint16_t dialog_height = 347;
+	const uint16_t dialog_border = 0x04A0;
+	const uint16_t dialog_bg = 0x2104;
+	const uint16_t dialog_y = (528 - dialog_height) / 2;
+	const uint16_t dialog_x = (320 - dialog_width) / 2;
+
+	uint32_t key1;
+	uint32_t key2;
+
+	uint8_t selected_item = 0;
+	uint8_t selected_color_rect_obj0 = 0;
+	uint8_t selected_color_rect_obj1 = 0;
+	uint8_t selected_color_rect_bg = 0;
+	uint8_t hold_amount = 0;
+
+	bool in_menu = true;
+	bool button_pressed = true;
+	bool holding_button = false;
+
+	while (in_menu)
+	{
+		// draw dialog background
+		for (uint16_t y = 0; y < dialog_height; y++)
+		{
+			for (uint16_t x = 0; x < dialog_width; x++)
+			{
+				if(y == 0 || y == (dialog_height - 1) || x == 0 || x == (dialog_width - 1))
+					vram[((y + dialog_y) * (LCD_WIDTH * 2)) + x + dialog_x] = dialog_border;
+				else
+					vram[((y + dialog_y) * (LCD_WIDTH * 2)) + x + dialog_x] = dialog_bg;
+			}
+		}
+
+		// draw title
+		char title[100] = "Edit ";
+		strcat(title, palette_to_edit->name);
+
+		print_string(title, (320 - (strlen(title) * 6)) / 2, dialog_y + 5, 0, dialog_border, 0x0000, 1);
+
+		// draw color edit panels
+		draw_color_edit_panel(dialog_x + 2, dialog_y + 33, dialog_width - 4, selected_color_rect_obj0, "OBJ0", 
+			palette_to_edit->data[0], selected_item);
+
+		draw_color_edit_panel(dialog_x + 2, dialog_y + 130, dialog_width - 4, selected_color_rect_obj1, "OBJ1", 
+			palette_to_edit->data[1], selected_item - 4);		
+
+		draw_color_edit_panel(dialog_x + 2, dialog_y + 227, dialog_width - 4, selected_color_rect_bg, "Background", 
+			palette_to_edit->data[2], selected_item - 8);		
+
+		// draw done button
+		print_string("      Done      ", 111, dialog_y + 328, 0, 0xFFFF, 0x8410 * (selected_item == 12), 1); 
+
+		LCD_Refresh();
+
+		// Wait for release
+		while(button_pressed) 
+		{ 
+			getKey(&key1, &key2);
+
+			if(!(key1 | key2))
+			{
+				button_pressed = false;
+				holding_button = false;
+			}
+
+			LCD_Refresh(); // LCD_Refresh to create a delay
+
+			if(hold_amount++ > 20 || (holding_button && hold_amount > 3))
+			{
+				holding_button = true;
+				button_pressed = false;
+			}
+		}
+
+		hold_amount = 0;
+
+		getKey(&key1, &key2);
+
+		// handle controls		
+		if(testKey(key1, key2, KEY_UP))
+		{
+			button_pressed = true;
+
+			if(selected_item != 0)
+				selected_item--;
+		}
+
+		if(testKey(key1, key2, KEY_DOWN))
+		{
+			button_pressed = true;
+
+			if(selected_item != 12)
+				selected_item++;
+		}
+
+		if(testKey(key1, key2, KEY_LEFT))
+		{
+			button_pressed = true;
+
+			switch (selected_item)
+			{
+			// color rectangle selection
+			case 0:
+				if(selected_color_rect_obj0 != 0)
+					selected_color_rect_obj0--;
+				break;
+			case 4:
+				if(selected_color_rect_obj1 != 0)
+					selected_color_rect_obj1--;
+				break;
+			case 8:
+				if(selected_color_rect_bg != 0)
+					selected_color_rect_bg--;
+				break;
+
+			// slider interaction
+			case 1:
+				if(RGB565_TO_R(palette_to_edit->data[0][selected_color_rect_obj0]) != 0)
+					palette_to_edit->data[0][selected_color_rect_obj0] = RGB_TO_RGB565(
+						(RGB565_TO_R(palette_to_edit->data[0][selected_color_rect_obj0]) - 1), 
+						RGB565_TO_G(palette_to_edit->data[0][selected_color_rect_obj0]),
+						RGB565_TO_B(palette_to_edit->data[0][selected_color_rect_obj0]));
+				break;
+			case 2:
+				if(RGB565_TO_G(palette_to_edit->data[0][selected_color_rect_obj0]) != 0)
+					palette_to_edit->data[0][selected_color_rect_obj0] = RGB_TO_RGB565(
+						RGB565_TO_R(palette_to_edit->data[0][selected_color_rect_obj0]), 
+						(RGB565_TO_G(palette_to_edit->data[0][selected_color_rect_obj0]) - 1),
+						RGB565_TO_B(palette_to_edit->data[0][selected_color_rect_obj0]));
+				break;
+			case 3:
+				if(RGB565_TO_B(palette_to_edit->data[0][selected_color_rect_obj0]) != 0)
+					palette_to_edit->data[0][selected_color_rect_obj0] = RGB_TO_RGB565(
+						RGB565_TO_R(palette_to_edit->data[0][selected_color_rect_obj0]), 
+						RGB565_TO_G(palette_to_edit->data[0][selected_color_rect_obj0]),
+						(RGB565_TO_B(palette_to_edit->data[0][selected_color_rect_obj0]) - 1));
+				break;
+			case 5:
+				if(RGB565_TO_R(palette_to_edit->data[1][selected_color_rect_obj1]) != 0)
+					palette_to_edit->data[1][selected_color_rect_obj1] = RGB_TO_RGB565(
+						(RGB565_TO_R(palette_to_edit->data[1][selected_color_rect_obj1]) - 1), 
+						RGB565_TO_G(palette_to_edit->data[1][selected_color_rect_obj1]),
+						RGB565_TO_B(palette_to_edit->data[1][selected_color_rect_obj1]));
+				break;
+			case 6:
+				if(RGB565_TO_G(palette_to_edit->data[1][selected_color_rect_obj1]) != 0)
+					palette_to_edit->data[1][selected_color_rect_obj1] = RGB_TO_RGB565(
+						RGB565_TO_R(palette_to_edit->data[1][selected_color_rect_obj1]), 
+						(RGB565_TO_G(palette_to_edit->data[1][selected_color_rect_obj1]) - 1),
+						RGB565_TO_B(palette_to_edit->data[1][selected_color_rect_obj1]));
+				break;
+			case 7:
+				if(RGB565_TO_B(palette_to_edit->data[1][selected_color_rect_obj1]) != 0)
+					palette_to_edit->data[1][selected_color_rect_obj1] = RGB_TO_RGB565(
+						RGB565_TO_R(palette_to_edit->data[1][selected_color_rect_obj1]), 
+						RGB565_TO_G(palette_to_edit->data[1][selected_color_rect_obj1]),
+						(RGB565_TO_B(palette_to_edit->data[1][selected_color_rect_obj1]) - 1));
+				break;
+			case 9:
+				if(RGB565_TO_R(palette_to_edit->data[2][selected_color_rect_bg]) != 0)
+					palette_to_edit->data[2][selected_color_rect_bg] = RGB_TO_RGB565(
+						(RGB565_TO_R(palette_to_edit->data[2][selected_color_rect_bg]) - 1), 
+						RGB565_TO_G(palette_to_edit->data[2][selected_color_rect_bg]),
+						RGB565_TO_B(palette_to_edit->data[2][selected_color_rect_bg]));
+				break;
+			case 10:
+				if(RGB565_TO_G(palette_to_edit->data[2][selected_color_rect_bg]) != 0)
+					palette_to_edit->data[2][selected_color_rect_bg] = RGB_TO_RGB565(
+						RGB565_TO_R(palette_to_edit->data[2][selected_color_rect_bg]), 
+						(RGB565_TO_G(palette_to_edit->data[2][selected_color_rect_bg]) - 1),
+						RGB565_TO_B(palette_to_edit->data[2][selected_color_rect_bg]));
+				break;
+			case 11:
+				if(RGB565_TO_B(palette_to_edit->data[2][selected_color_rect_bg]) != 0)
+					palette_to_edit->data[2][selected_color_rect_bg] = RGB_TO_RGB565(
+						RGB565_TO_R(palette_to_edit->data[2][selected_color_rect_bg]), 
+						RGB565_TO_G(palette_to_edit->data[2][selected_color_rect_bg]),
+						(RGB565_TO_B(palette_to_edit->data[2][selected_color_rect_bg]) - 1));
+				break;
+			default:
+				break;
+			}
+		}
+
+		if(testKey(key1, key2, KEY_RIGHT))
+		{
+			button_pressed = true;
+
+			switch (selected_item)
+			{
+			// color rectangle selection
+			case 0:
+				if(selected_color_rect_obj0 != 3)
+					selected_color_rect_obj0++;
+				break;
+			case 4:
+				if(selected_color_rect_obj1 != 3)
+					selected_color_rect_obj1++;
+				break;
+			case 8:
+				if(selected_color_rect_bg != 3)
+					selected_color_rect_bg++;
+				break;
+
+			// slider interaction
+			case 1:
+				if(RGB565_TO_R(palette_to_edit->data[0][selected_color_rect_obj0]) != 0b11111)
+					palette_to_edit->data[0][selected_color_rect_obj0] = RGB_TO_RGB565(
+						(RGB565_TO_R(palette_to_edit->data[0][selected_color_rect_obj0]) + 1), 
+						RGB565_TO_G(palette_to_edit->data[0][selected_color_rect_obj0]),
+						RGB565_TO_B(palette_to_edit->data[0][selected_color_rect_obj0]));
+				break;
+			case 2:
+				if(RGB565_TO_G(palette_to_edit->data[0][selected_color_rect_obj0]) != 0b111111)
+					palette_to_edit->data[0][selected_color_rect_obj0] = RGB_TO_RGB565(
+						RGB565_TO_R(palette_to_edit->data[0][selected_color_rect_obj0]), 
+						(RGB565_TO_G(palette_to_edit->data[0][selected_color_rect_obj0]) + 1),
+						RGB565_TO_B(palette_to_edit->data[0][selected_color_rect_obj0]));
+				break;
+			case 3:
+				if(RGB565_TO_B(palette_to_edit->data[0][selected_color_rect_obj0]) != 0b11111)
+					palette_to_edit->data[0][selected_color_rect_obj0] = RGB_TO_RGB565(
+						RGB565_TO_R(palette_to_edit->data[0][selected_color_rect_obj0]), 
+						RGB565_TO_G(palette_to_edit->data[0][selected_color_rect_obj0]),
+						(RGB565_TO_B(palette_to_edit->data[0][selected_color_rect_obj0]) + 1));
+				break;
+			case 5:
+				if(RGB565_TO_R(palette_to_edit->data[1][selected_color_rect_obj1]) != 0b11111)
+					palette_to_edit->data[1][selected_color_rect_obj1] = RGB_TO_RGB565(
+						(RGB565_TO_R(palette_to_edit->data[1][selected_color_rect_obj1]) + 1), 
+						RGB565_TO_G(palette_to_edit->data[1][selected_color_rect_obj1]),
+						RGB565_TO_B(palette_to_edit->data[1][selected_color_rect_obj1]));
+				break;
+			case 6:
+				if(RGB565_TO_G(palette_to_edit->data[1][selected_color_rect_obj1]) != 0b111111)
+					palette_to_edit->data[1][selected_color_rect_obj1] = RGB_TO_RGB565(
+						RGB565_TO_R(palette_to_edit->data[1][selected_color_rect_obj1]), 
+						(RGB565_TO_G(palette_to_edit->data[1][selected_color_rect_obj1]) + 1),
+						RGB565_TO_B(palette_to_edit->data[1][selected_color_rect_obj1]));
+				break;
+			case 7:
+				if(RGB565_TO_B(palette_to_edit->data[1][selected_color_rect_obj1]) != 0b11111)
+					palette_to_edit->data[1][selected_color_rect_obj1] = RGB_TO_RGB565(
+						RGB565_TO_R(palette_to_edit->data[1][selected_color_rect_obj1]), 
+						RGB565_TO_G(palette_to_edit->data[1][selected_color_rect_obj1]),
+						(RGB565_TO_B(palette_to_edit->data[1][selected_color_rect_obj1]) + 1));
+				break;
+			case 9:
+				if(RGB565_TO_R(palette_to_edit->data[2][selected_color_rect_bg]) != 0b11111)
+					palette_to_edit->data[2][selected_color_rect_bg] = RGB_TO_RGB565(
+						(RGB565_TO_R(palette_to_edit->data[2][selected_color_rect_bg]) + 1), 
+						RGB565_TO_G(palette_to_edit->data[2][selected_color_rect_bg]),
+						RGB565_TO_B(palette_to_edit->data[2][selected_color_rect_bg]));
+				break;
+			case 10:
+				if(RGB565_TO_G(palette_to_edit->data[2][selected_color_rect_bg]) != 0b111111)
+					palette_to_edit->data[2][selected_color_rect_bg] = RGB_TO_RGB565(
+						RGB565_TO_R(palette_to_edit->data[2][selected_color_rect_bg]), 
+						(RGB565_TO_G(palette_to_edit->data[2][selected_color_rect_bg]) + 1),
+						RGB565_TO_B(palette_to_edit->data[2][selected_color_rect_bg]));
+				break;
+			case 11:
+				if(RGB565_TO_B(palette_to_edit->data[2][selected_color_rect_bg]) != 0b11111)
+					palette_to_edit->data[2][selected_color_rect_bg] = RGB_TO_RGB565(
+						RGB565_TO_R(palette_to_edit->data[2][selected_color_rect_bg]), 
+						RGB565_TO_G(palette_to_edit->data[2][selected_color_rect_bg]),
+						(RGB565_TO_B(palette_to_edit->data[2][selected_color_rect_bg]) + 1));
+				break;
+			default:
+				break;
+			}
+		}
+
+		if(testKey(key1, key2, KEY_EXE))
+		{
+			if(selected_item == 12)
+			{
+				button_pressed = true;
+				in_menu = false;
+			}
+		}
+	}
+}
+
+void draw_color_edit_panel(uint16_t x, uint16_t y, uint16_t width, uint8_t selected_color_rect, 
+	char *title, uint16_t *colors, int8_t selected_item)
+{
+	const uint16_t dialog_bg = 0x2104;
+	const uint16_t color_rect_width = 47;
+	const uint16_t color_rect_height = 25;
+	const uint16_t item_selected_color = 0x04A0;
+	const uint16_t slider_track_color = 0xB5B6;
+	const uint16_t slider_offset = 42;
+
+	// draw title
+	print_string(title, x + 5, y, 0, 0xFFFF, 0x0000, 1);
+
+	// draw obj0 color selection
+	draw_rectangle(x + 4, y + 15, width - 8, color_rect_height + 4, dialog_bg,
+		(selected_item == 0) * 2, item_selected_color);
+
+	for(uint8_t i = 0; i < 4; i++)
+	{
+		draw_rectangle(x + 6 + (i * color_rect_width), y + 17, color_rect_width,
+			color_rect_height, colors[i], 2 * (selected_color_rect == i), 
+			item_selected_color);
+	}
+
+	// draw obj0 color sliders and description
+	print_string("Red", x + 5, y + 46, 0, 0xFFFF, 0x0000, 1);
+	draw_slider(x + slider_offset, y + 47, width - slider_offset - 7, slider_track_color, 
+	((selected_item == 1) * item_selected_color) + (!(selected_item == 1) * 0xFFFF), 
+		0b11111, RGB565_TO_R(colors[selected_color_rect]));
+
+	print_string("Green", x + 5, y + 60, 0, 0xFFFF, 0x0000, 1);
+	draw_slider(x + slider_offset, y + 61, width - slider_offset - 7, slider_track_color, 
+	((selected_item == 2) * item_selected_color) + (!(selected_item == 2) * 0xFFFF), 
+		0b111111, RGB565_TO_G(colors[selected_color_rect]));
+
+	print_string("Blue", x + 5, y + 74, 0, 0xFFFF, 0x0000, 1);
+	draw_slider(x + slider_offset, y + 75, width - slider_offset - 7, slider_track_color, 
+	((selected_item == 3) * item_selected_color) + (!(selected_item == 3) * 0xFFFF), 
+		0b11111, RGB565_TO_B(colors[selected_color_rect]));
 }
 
 void convert_byte_to_string(uint8_t byte, char *string)
@@ -1328,6 +1670,46 @@ bool get_game_palette(uint8_t game_checksum, uint16_t (*game_palette)[4])
 		default:
 			return 0;
 	}
+}
+
+void draw_slider(uint16_t x, uint16_t y, uint16_t width, uint16_t track_color,
+	uint16_t handle_color, uint16_t max_value, uint16_t value)
+{
+	const uint16_t handle_height = 12;
+	const uint16_t handle_width = 4;
+	const uint16_t track_width = width - handle_width;
+
+	// calculate handle position
+	const uint16_t handle_offset = (((value * 0xFFFF) / max_value) * track_width) / 0xFFFF;
+
+	// draw track
+	draw_rectangle(x + (handle_width / 2), y + (handle_height / 2) - 1, track_width, 
+		2, track_color, 0, 0);
+
+	// draw handle
+	draw_rectangle(x + handle_offset, y, handle_width, handle_height, handle_color, 0, 0);	
+}
+
+void draw_rectangle(uint16_t x, uint16_t y, uint16_t width, uint16_t height,
+	uint16_t color, uint16_t border, uint16_t border_color)
+{
+	for (uint16_t iy = 0; iy < height; iy++)
+	{
+		for (uint16_t ix = 0; ix < width; ix++)
+		{
+			uint16_t y_pixel = iy + y;
+			uint16_t x_pixel = ix + x;
+
+			if(y_pixel >= 528 || x_pixel >= 320)
+				continue;
+
+			uint16_t pixel_color = (ix < border || (width - ix - 1) < border || iy < border || (height - iy - 1) < border) * border_color + 
+				!(ix < border || (width - ix - 1) < border || iy < border || (height - iy - 1) < border) * color;
+
+			vram[(y_pixel * 320) + x_pixel] = pixel_color;
+		}		
+	}
+		
 }
 
 /**
