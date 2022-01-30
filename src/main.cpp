@@ -140,7 +140,7 @@ struct priv_t priv =
 struct palette
 {
 	/* The name of the palette */
-	char name[20];
+	char name[25];
 
 	/* The actual content of the palette */
 	uint16_t data[3][4];
