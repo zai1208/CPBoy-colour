@@ -174,7 +174,11 @@ struct tm
 */
 struct cpu_registers_s
 {
-	/* Combine A and F registers. */
+	/* 
+	* Combine A and F registers.
+	* This union is broken and should not be used. Address the 
+	* A and F registers individually instead.  
+	*/
 	union
 	{
 		struct
@@ -3613,7 +3617,8 @@ void gb_reset(struct gb_s *gb)
 	gb->cart_mode_select = 0;
 
 	/* Initialise CPU registers as though a DMG. */
-	gb->cpu_reg.af = 0x01B0;
+	gb->cpu_reg.a = 0x01;
+	gb->cpu_reg.f = 0xB0;
 	gb->cpu_reg.bc = 0x0013;
 	gb->cpu_reg.de = 0x00D8;
 	gb->cpu_reg.hl = 0x014D;
