@@ -146,12 +146,7 @@ struct palette
 	uint16_t data[3][4];
 };
 
-const uint16_t default_palette[3][4] = 
-{
-	{ 0x7FFF, 0x5294, 0x294A, 0x0000 },
-	{ 0x7FFF, 0x5294, 0x294A, 0x0000 },
-	{ 0x7FFF, 0x5294, 0x294A, 0x0000 }
-};
+uint16_t default_palette[3][4];
 
 struct palette *color_palettes = NULL;
 
@@ -182,8 +177,19 @@ void main()
 	mkdir("\\fls0\\gb-saves");
 
 	// init palette stuff
-	color_palettes = NULL;
-	current_palette = 0;
+	{
+		color_palettes = NULL;
+		current_palette = 0;
+
+		const uint16_t _default_palette[3][4] = 
+		{
+			{ 0x7FFF, 0x5294, 0x294A, 0x0000 },
+			{ 0x7FFF, 0x5294, 0x294A, 0x0000 },
+			{ 0x7FFF, 0x5294, 0x294A, 0x0000 }
+		};
+		
+		memcpy(default_palette, _default_palette, sizeof(default_palette));
+	}
 
 	findFiles();
 
