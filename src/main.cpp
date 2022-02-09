@@ -97,6 +97,7 @@ void findFiles();
 uint8_t initEmulator();
 uint8_t emulation_menu();
 void display_pause_overlay();
+void display_menu_overlay();
 void draw_emulation_menu(uint8_t selected_tab, uint8_t selected_item, const uint8_t tab_count);
 void show_palette_dialog();
 void show_edit_palette_dialog(struct palette *palette);
@@ -280,6 +281,10 @@ void main()
 		calcEnd();
 		return;
 	}
+
+	// draw menu and its overlay
+	draw_emulation_menu(0, 0, 4);
+	display_menu_overlay();
 
 	executeRom();
 
@@ -577,7 +582,7 @@ uint8_t emulation_menu()
 		{
 			while(Input_IsAnyKeyDown()) { }
 
-			return 0;
+			in_menu = false;
 		}
 
 		if(testKey(key1, key2, KEY_RIGHT))
@@ -675,6 +680,9 @@ uint8_t emulation_menu()
 		}
 	}
 
+	// draw menu overlay
+	display_menu_overlay();
+
 	return 0;
 }
 
@@ -705,6 +713,29 @@ void display_pause_overlay()
 	print_string("Press [(-)] to continue", 91, 148, 0, 0xFFFF, 0x0000, 1);
 
 	LCD_Refresh();
+}
+
+void display_menu_overlay()
+{
+	// go through every pixel of the gameboy screen and darken it
+	for(uint16_t y = 0; y < (528 - (LCD_HEIGHT * 2)); y++)
+	{
+		for(uint16_t x = 0; x < LCD_WIDTH * 2; x++)
+		{
+			uint32_t pixel = vram[((y + (LCD_HEIGHT * 2)) * (LCD_WIDTH * 2)) + x];
+		
+			uint8_t red = ((RGB565_TO_R(pixel) * 13108) / 65536);
+			uint8_t green = ((RGB565_TO_G(pixel) * 13108) / 65536);
+			uint8_t blue = ((RGB565_TO_B(pixel) * 13108) / 65536);
+		
+			pixel = RGB_TO_RGB565(red, green, blue); 
+
+			vram[((y + (LCD_HEIGHT * 2)) * (LCD_WIDTH * 2)) + x] = pixel;
+		}
+	}
+
+	// print open menu text
+	print_string("Press [(-)] to open menu", 87, 402, 0, 0xFFFF, 0x0000, 1);
 }
 
 void draw_emulation_menu(uint8_t selected_tab, uint8_t selected_item, const uint8_t tab_count)
