@@ -36,17 +36,28 @@
 
 // #define MAX_ROM_SIZE 0x10000
 
-#define CP_KEY_UP				0
-#define CP_KEY_DOWN			1
-#define CP_KEY_LEFT			2
+#define GB_KEY_UP				0
+#define GB_KEY_DOWN			1
+#define GB_KEY_LEFT			2
+#define GB_KEY_RIGHT		3
+#define GB_KEY_A				4
+#define GB_KEY_B				5
+#define GB_KEY_START		6
+#define GB_KEY_SELECT		7
+
+#define CP_KEY_UP					0
+#define CP_KEY_DOWN				1
+#define CP_KEY_LEFT				2
 #define CP_KEY_RIGHT			3
-#define CP_KEY_PLUS			4
+#define CP_KEY_PLUS				4
 #define CP_KEY_SHIFT			5
 #define CP_KEY_CLEAR			6
 #define CP_KEY_EXE				7
-#define CP_KEY_KEYBOARD	8		
+#define CP_KEY_KEYBOARD		8		
 #define CP_KEY_BACKSPACE	9			
-#define CP_KEY_NEGATIVE	10		
+#define CP_KEY_NEGATIVE		10		
+
+#define CONTROLS_COUNT	(sizeof(controls) / 8)
 
 #define TAB_INFO 				0
 #define TAB_SAVESTATES 	1
@@ -89,6 +100,8 @@ void display_pause_overlay();
 void draw_emulation_menu(uint8_t selected_tab, uint8_t selected_item, const uint8_t tab_count);
 void show_palette_dialog();
 void show_edit_palette_dialog(struct palette *palette);
+void show_controls_dialog();
+void show_select_key_dialog(uint32_t *key_controls);
 void draw_color_edit_panel(uint16_t x, uint16_t y, uint16_t width, uint8_t selected_color_rect, 
 	char *title, uint16_t *colors, int8_t selected_item);
 void draw_slider(uint16_t x, uint16_t y, uint16_t width, uint16_t track_color,
@@ -101,6 +114,8 @@ void convert_byte_to_string(uint8_t byte, char *string);
 uint8_t convert_string_to_byte(char *string); 
 int8_t save_palette(struct palette *palette);
 void delete_palette(struct palette *palette);
+int8_t save_controls(uint32_t (*controls_ptr)[2]);
+void load_controls(uint32_t (*controls_ptr)[2]);
 bool get_game_palette(uint8_t game_checksum, uint16_t (*game_palette)[4]);
 void *memcpy(void *dest, const void *src, size_t count);
 
@@ -150,6 +165,8 @@ uint16_t default_palette[3][4];
 
 struct palette *color_palettes = NULL;
 
+uint32_t controls[8][2];
+
 // get the roms in the roms folder
 char fileNames[64][100];
 
@@ -158,6 +175,7 @@ uint8_t current_palette;
 uint8_t current_filename;
 
 bool game_palette_exists;
+bool controls_changed;
 
 int dirFiles = 0;
 
@@ -190,6 +208,8 @@ void main()
 		
 		memcpy(default_palette, _default_palette, sizeof(default_palette));
 	}
+
+	controls_changed = false;
 
 	findFiles();
 
@@ -275,6 +295,10 @@ void main()
 	free(priv.rom);
 	free(color_palettes);
 
+	// save user stuff
+	if(controls_changed)
+		save_controls(controls);
+
 	calcEnd();
 }
 
@@ -283,6 +307,9 @@ uint8_t initEmulator()
 	// LCD_ClearScreen();
 	Debug_Printf(0, 0, false, 0, "Init");
 	LCD_Refresh();
+
+	// Load user configs
+	load_controls(controls);
 
 	enum gb_init_error_e gb_ret;
 
@@ -613,7 +640,9 @@ uint8_t emulation_menu()
 				case 0:
 					show_palette_dialog();
 					break;
-				
+				case 1:
+					show_controls_dialog();
+					break;				
 				default:
 					break;
 				}
@@ -1308,6 +1337,324 @@ void draw_color_edit_panel(uint16_t x, uint16_t y, uint16_t width, uint8_t selec
 		0b11111, RGB565_TO_B(colors[selected_color_rect]));
 }
 
+void show_controls_dialog()
+{
+	uint16_t lcd_bak[528][320];
+
+	// backup lcd
+	for(uint16_t y = 0; y < 528; y++)
+	{
+		for(uint16_t x = 0; x < 320; x++)
+			lcd_bak[y][x] = vram[(y * 320) + x];
+	}
+	
+	const uint16_t subtitle_fg = 0xB5B6;
+	const uint16_t dialog_width = 150;
+	const uint16_t dialog_height = 80 + (CONTROLS_COUNT * 14);
+	const uint16_t dialog_y = (528 - dialog_height) / 2;
+	const uint16_t dialog_x = (320 - dialog_width) / 2;
+	const uint16_t dialog_border = 0x04A0;
+	const uint16_t dialog_bg = 0x2104;
+
+	uint8_t selected_item = 0;
+
+	uint32_t key1;
+	uint32_t key2;
+
+	bool button_pressed = true;
+	bool in_menu = true;
+
+	while (in_menu)
+	{
+		// draw dialog background
+		for (uint16_t y = 0; y < dialog_height; y++)
+		{
+			for (uint16_t x = 0; x < dialog_width; x++)
+			{
+				if(y == 0 || y == (dialog_height - 1) || x == 0 || x == (dialog_width - 1))
+					vram[((y + dialog_y) * (LCD_WIDTH * 2)) + x + dialog_x] = dialog_border;
+				else
+					vram[((y + dialog_y) * (LCD_WIDTH * 2)) + x + dialog_x] = dialog_bg;
+			}
+		}
+
+		// draw title
+		print_string("Controls", 135, dialog_y + 5, 0, dialog_border, 0x0000, 1);
+
+		// draw subtitle
+		print_string("[EXE] to edit", 120, dialog_y + 23, 0, subtitle_fg, 0x0000, 1);
+
+		// draw all controls
+		for (uint8_t i = 0; i < CONTROLS_COUNT; i++)
+		{
+			char title[11];
+
+			switch (i)
+			{
+			case GB_KEY_UP:
+				strcpy(title, "UP");
+				break;
+			case GB_KEY_DOWN:
+				strcpy(title, "DOWN");
+				break;
+			case GB_KEY_LEFT:
+				strcpy(title, "LEFT");
+				break;
+			case GB_KEY_RIGHT:
+				strcpy(title, "RIGHT");
+				break;
+			case GB_KEY_A:
+				strcpy(title, "A");
+				break;
+			case GB_KEY_B:
+				strcpy(title, "B");
+				break;
+			case GB_KEY_START:
+				strcpy(title, "START");
+				break;
+			case GB_KEY_SELECT:
+				strcpy(title, "SELECT");
+				break;
+			
+			default:
+				break;
+			}
+
+			print_string(title, dialog_x + 8, dialog_y + 51 + (i * 14), 0, 0xFFFF, 0x0000, 1);
+
+			switch (controls[i][0])
+			{
+			case KEY_SHIFT:
+				strcpy(title, "[SHIFT]");
+				break;
+			case KEY_CLEAR:
+				strcpy(title, "[CLEAR]");
+				break;
+			case KEY_BACKSPACE:
+				strcpy(title, "[<--]");
+				break;
+			case KEY_LEFT:
+				strcpy(title, "[LEFT]");
+				break;
+			case KEY_RIGHT:
+				strcpy(title, "[RIGHT]");
+				break;
+			case KEY_Z:
+				strcpy(title, "[Z]");
+				break;
+			case KEY_POWER:
+				strcpy(title, "[^]");
+				break;
+			case KEY_DIVIDE:
+				strcpy(title, "[/]");
+				break;
+			case KEY_MULTIPLY:
+				strcpy(title, "[*]");
+				break;
+			case KEY_SUBTRACT:
+				strcpy(title, "[-]");
+				break;
+			case KEY_ADD:
+				strcpy(title, "[+]");
+				break;
+			case KEY_EXE:
+				strcpy(title, "[EXE]");
+				break;
+			case KEY_EXP:
+				strcpy(title, "[EXP]");
+				break;
+			case KEY_3:
+				strcpy(title, "[3]");
+				break;
+			case KEY_6:
+				strcpy(title, "[6]");
+				break;
+			case KEY_9:
+				strcpy(title, "[9]");
+				break;
+			
+			default:
+				break;
+			}
+
+			switch (controls[i][1])
+			{
+			case KEY_KEYBOARD:
+				strcpy(title, "[KEYBOARD]");
+				break;
+			case KEY_UP:
+				strcpy(title, "[UP]");
+				break;
+			case KEY_DOWN:
+				strcpy(title, "[DOWN]");
+				break;
+			case KEY_EQUALS:
+				strcpy(title, "[=]");
+				break;
+			case KEY_X:
+				strcpy(title, "[X]");
+				break;
+			case KEY_Y:
+				strcpy(title, "[Y]");
+				break;
+			case KEY_LEFT_BRACKET:
+				strcpy(title, "[(]");
+				break;
+			case KEY_RIGHT_BRACKET:
+				strcpy(title, "[)]");
+				break;
+			case KEY_COMMA:
+				strcpy(title, "[,]");
+				break;
+			case KEY_NEGATIVE:
+				strcpy(title, "[(-)]");
+				break;
+			case KEY_0:
+				strcpy(title, "[0]");
+				break;
+			case KEY_DOT:
+				strcpy(title, "[.]");
+				break;
+			case KEY_1:
+				strcpy(title, "[1]");
+				break;
+			case KEY_2:
+				strcpy(title, "[2]");
+				break;
+			case KEY_4:
+				strcpy(title, "[4]");
+				break;
+			case KEY_5:
+				strcpy(title, "[5]");
+				break;
+			case KEY_7:
+				strcpy(title, "[7]");
+				break;
+			case KEY_8:
+				strcpy(title, "[8]");
+				break;
+			
+			default:
+				break;
+			}
+		
+			if(!(controls[i][0] | controls[i][1]))
+				strcpy(title, "NONE");
+
+			print_string(title, dialog_x + dialog_width - 10 - (strlen(title) * 6), dialog_y + 51 + (i * 14), 0, 0xFFFF, 
+				(selected_item == i) * 0x8410, 1);
+		}
+			
+		// draw action buttons
+		print_string("      Done      ", 111, dialog_y + (CONTROLS_COUNT * 14) + 61, 0, 
+			0xFFFF, (selected_item == CONTROLS_COUNT) * 0x8410, 1);
+
+		LCD_Refresh();
+
+		// Wait for release
+		while(button_pressed) 
+		{ 
+			getKey(&key1, &key2);
+
+			if(!(key1 | key2))
+				button_pressed = false;
+		}
+
+		getKey(&key1, &key2);
+
+		// handle controls		
+		if(testKey(key1, key2, KEY_UP))
+		{
+			button_pressed = true;
+
+			if(selected_item != 0)
+				selected_item--;
+		}
+		
+		if(testKey(key1, key2, KEY_DOWN))
+		{
+			button_pressed = true;
+
+			if(selected_item != CONTROLS_COUNT)
+				selected_item++;
+		}
+		
+		if(testKey(key1, key2, KEY_EXE))
+		{
+			button_pressed = true;
+
+			if(selected_item == CONTROLS_COUNT)
+			{
+				in_menu = false; // close color palette menu
+			}
+			else
+			{
+				// edit key
+				show_select_key_dialog(controls[selected_item]);
+			}
+		}
+	}
+
+	// restore lcd
+	for(uint16_t y = 0; y < 528; y++)
+	{
+		for(uint16_t x = 0; x < 320; x++)
+			vram[(y * 320) + x] = lcd_bak[y][x];
+	}
+}
+
+void show_select_key_dialog(uint32_t *key_controls)
+{	
+	const uint16_t dialog_width = 100;
+	const uint16_t dialog_height = 32;
+	const uint16_t dialog_y = (528 - dialog_height) / 2;
+	const uint16_t dialog_x = (320 - dialog_width) / 2;
+	const uint16_t dialog_border = 0x04A0;
+	const uint16_t dialog_bg = 0x2104;
+
+	uint32_t key1;
+	uint32_t key2;
+
+	bool button_pressed = true;
+
+	// draw dialog background
+	for (uint16_t y = 0; y < dialog_height; y++)
+	{
+		for (uint16_t x = 0; x < dialog_width; x++)
+		{
+			if(y == 0 || y == (dialog_height - 1) || x == 0 || x == (dialog_width - 1))
+				vram[((y + dialog_y) * (LCD_WIDTH * 2)) + x + dialog_x] = dialog_border;
+			else
+				vram[((y + dialog_y) * (LCD_WIDTH * 2)) + x + dialog_x] = dialog_bg;
+		}
+	}
+
+	// draw title
+	print_string("Press a key", dialog_x + ((dialog_width - (strlen("Press a key") * 6) - 2) / 2), 
+		dialog_y + 10, 0, dialog_border, dialog_bg, 1);
+
+	LCD_Refresh();
+
+	// Wait for release
+	while(button_pressed) 
+	{ 
+		getKey(&key1, &key2);
+
+		if(!(key1 | key2))
+			button_pressed = false;
+	}
+
+	getKey(&key1, &key2);
+	
+	while (!(key1 | key2))
+		getKey(&key1, &key2);
+
+	key_controls[0] = key1;
+	key_controls[1] = key2;
+
+	controls_changed = true;
+}
+
 void convert_byte_to_string(uint8_t byte, char *string)
 {
 	string[0] = (byte / 100) + '0';
@@ -1516,6 +1863,82 @@ void load_palettes()
 	}
 
 	findClose(find_handle);
+}
+
+int8_t save_controls(uint32_t (*controls_ptr)[2])
+{
+	// make user directory
+	mkdir("\\fls0\\CPBoy");
+	mkdir("\\fls0\\CPBoy\\user");
+
+	// create save file
+	int f = open("\\fls0\\CPBoy\\user\\controls.cpbc", OPEN_WRITE | OPEN_CREATE);
+
+	if(f < 0)
+		return -1;
+
+	if(write(f, controls_ptr, sizeof(controls_ptr) * CONTROLS_COUNT) < 0)
+	{
+		close(f);
+		return -1;
+	}
+	
+	close(f);
+
+	return 0;
+}
+
+void load_controls(uint32_t (*controls_ptr)[2])
+{
+	uint32_t default_controls[CONTROLS_COUNT][2] = 
+	{
+		{ 0, 					KEY_UP },
+		{ 0, 					KEY_DOWN },
+		{ KEY_LEFT, 	0 },
+		{ KEY_RIGHT, 	0 },
+		{ KEY_EXE, 		0 },
+		{ KEY_ADD, 		0 },
+		{ KEY_CLEAR, 	0 },
+	};
+
+	/*
+	* We need to manually add the last element to the default controls array because
+	* else the linker needs a ___movmem_i4_even subroutine (I don't know why)
+	*/
+	const uint32_t tmp[2] = { KEY_SHIFT, 	0 };
+	memcpy(&default_controls[CONTROLS_COUNT - 1], tmp, sizeof(tmp));
+
+	// init controls array
+	memset(controls_ptr, 0, sizeof(controls_ptr) * CONTROLS_COUNT);
+
+	// open save file
+	int f = open("\\fls0\\CPBoy\\user\\controls.cpbc", OPEN_READ);
+
+	if(f >= 0)
+	{
+		if(read(f, controls_ptr, sizeof(controls_ptr) * CONTROLS_COUNT) >= 0)
+		{
+			close(f);
+
+			// check if all controls are set
+			for (uint8_t i = 0; i < CONTROLS_COUNT; i++)
+			{
+				if(controls_ptr[i][0] | controls_ptr[i][1])
+					continue;
+
+				// if control is not set, use default controls
+				controls_ptr[i][0] = default_controls[i][0];
+				controls_ptr[i][1] = default_controls[i][1];
+			}
+			
+			return;
+		}
+	
+		close(f);
+	}
+
+	// load default controls
+	memcpy(controls_ptr, default_controls, sizeof(default_controls));
 }
 
 bool get_game_palette(uint8_t game_checksum, uint16_t (*game_palette)[4])
