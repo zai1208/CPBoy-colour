@@ -368,6 +368,8 @@ uint8_t initEmulator()
 
 void executeRom() 
 {
+	uint32_t key1;
+	uint32_t key2;
 	uint32_t frame = 1;
 	uint8_t draw_frame = 0;
 
@@ -378,16 +380,18 @@ void executeRom()
 			gb_tick_rtc(&gb);
 
 		/* Handle Key Input */
-		gb.direct.joypad_bits.a = !Input_GetKeyState(&scancodes[CP_KEY_EXE]);
-		gb.direct.joypad_bits.b = !Input_GetKeyState(&scancodes[CP_KEY_PLUS]);
-		gb.direct.joypad_bits.select = !Input_GetKeyState(&scancodes[CP_KEY_SHIFT]);
-		gb.direct.joypad_bits.start = !Input_GetKeyState(&scancodes[CP_KEY_CLEAR]);
-		gb.direct.joypad_bits.up = !Input_GetKeyState(&scancodes[CP_KEY_UP]);
-		gb.direct.joypad_bits.down = !Input_GetKeyState(&scancodes[CP_KEY_DOWN]);
-		gb.direct.joypad_bits.left = !Input_GetKeyState(&scancodes[CP_KEY_LEFT]);
-		gb.direct.joypad_bits.right = !Input_GetKeyState(&scancodes[CP_KEY_RIGHT]);
+		getKey(&key1, &key2);
 
-		if(Input_GetKeyState(&scancodes[CP_KEY_KEYBOARD]))
+		gb.direct.joypad_bits.a = !((key1 & controls[GB_KEY_A][0]) | (key2 & controls[GB_KEY_A][1]));
+		gb.direct.joypad_bits.b =  !((key1 & controls[GB_KEY_B][0]) | (key2 & controls[GB_KEY_B][1]));
+		gb.direct.joypad_bits.select =  !((key1 & controls[GB_KEY_SELECT][0]) | (key2 & controls[GB_KEY_SELECT][1]));
+		gb.direct.joypad_bits.start =  !((key1 & controls[GB_KEY_START][0]) | (key2 & controls[GB_KEY_START][1]));
+		gb.direct.joypad_bits.up =  !((key1 & controls[GB_KEY_UP][0]) | (key2 & controls[GB_KEY_UP][1]));
+		gb.direct.joypad_bits.down =  !((key1 & controls[GB_KEY_DOWN][0]) | (key2 & controls[GB_KEY_DOWN][1]));
+		gb.direct.joypad_bits.left =  !((key1 & controls[GB_KEY_LEFT][0]) | (key2 & controls[GB_KEY_LEFT][1]));
+		gb.direct.joypad_bits.right =  !((key1 & controls[GB_KEY_RIGHT][0]) | (key2 & controls[GB_KEY_RIGHT][1]));
+
+		if(testKey(key1, key2, KEY_KEYBOARD))
 		{
 			gb.direct.frame_skip = !gb.direct.frame_skip;
 
@@ -397,7 +401,7 @@ void executeRom()
 				error_print("Frameskip off");
 		}
 
-		if(Input_GetKeyState(&scancodes[CP_KEY_BACKSPACE]))
+		if(testKey(key1, key2, KEY_BACKSPACE))
 		{
 			gb.direct.interlace = !gb.direct.interlace;
 
@@ -405,6 +409,29 @@ void executeRom()
 				error_print("Interlace on");
 			else
 				error_print("Interlace off");
+		}
+
+		if(testKey(key1, key2, KEY_NEGATIVE))
+		{
+			if(emulation_menu())
+				return;
+		}
+
+		/* 
+		* The getKey function doesn't recognize that a key is released when you quickly tap a signle key
+		* and that key is then held down until another input appears. Because of this, we need to 
+		* manually check again if all keys are down.
+		*/
+		if(!Input_IsAnyKeyDown())
+		{
+			gb.direct.joypad_bits.a = 1;
+			gb.direct.joypad_bits.b = 1;
+			gb.direct.joypad_bits.select = 1;
+			gb.direct.joypad_bits.start = 1;
+			gb.direct.joypad_bits.up = 1;
+			gb.direct.joypad_bits.down = 1;
+			gb.direct.joypad_bits.left = 1;
+			gb.direct.joypad_bits.right = 1;
 		}
 		
 		/* Run CPU until next frame */
@@ -417,12 +444,6 @@ void executeRom()
 
 			if(!draw_frame)
 				continue;
-		}
-
-		if(Input_GetKeyState(&scancodes[CP_KEY_NEGATIVE]))
-		{
-			if(emulation_menu())
-				return;
 		}
 
 		/* Update screen with current frame data */
@@ -1350,7 +1371,7 @@ void show_controls_dialog()
 	
 	const uint16_t subtitle_fg = 0xB5B6;
 	const uint16_t dialog_width = 150;
-	const uint16_t dialog_height = 80 + (CONTROLS_COUNT * 14);
+	const uint16_t dialog_height = 82 + (CONTROLS_COUNT * 14);
 	const uint16_t dialog_y = (528 - dialog_height) / 2;
 	const uint16_t dialog_x = (320 - dialog_width) / 2;
 	const uint16_t dialog_border = 0x04A0;
@@ -1546,7 +1567,7 @@ void show_controls_dialog()
 		}
 			
 		// draw action buttons
-		print_string("      Done      ", 111, dialog_y + (CONTROLS_COUNT * 14) + 61, 0, 
+		print_string("      Done      ", 111, dialog_y + (CONTROLS_COUNT * 14) + 63, 0, 
 			0xFFFF, (selected_item == CONTROLS_COUNT) * 0x8410, 1);
 
 		LCD_Refresh();
