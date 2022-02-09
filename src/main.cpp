@@ -96,8 +96,8 @@ void executeRom();
 void findFiles();
 uint8_t initEmulator();
 uint8_t emulation_menu();
-void display_pause_overlay();
-void display_menu_overlay();
+void draw_pause_overlay();
+void draw_menu_overlay();
 void draw_emulation_menu(uint8_t selected_tab, uint8_t selected_item, const uint8_t tab_count);
 void show_palette_dialog();
 void show_edit_palette_dialog(struct palette *palette);
@@ -284,7 +284,7 @@ void main()
 
 	// draw menu and its overlay
 	draw_emulation_menu(0, 0, 4);
-	display_menu_overlay();
+	draw_menu_overlay();
 
 	executeRom();
 
@@ -546,7 +546,7 @@ uint8_t *read_rom_to_ram(const char *file_name)
 uint8_t emulation_menu()
 {
 	// show emulation paused text
-	display_pause_overlay();
+	draw_pause_overlay();
 
 	const uint8_t tab_count = 4;
 
@@ -564,6 +564,7 @@ uint8_t emulation_menu()
 	while(in_menu)
 	{
 		draw_emulation_menu(selected_tab, selected_item, tab_count);
+		LCD_Refresh();
 
 		while(button_pressed) 
 		{ 
@@ -681,12 +682,12 @@ uint8_t emulation_menu()
 	}
 
 	// draw menu overlay
-	display_menu_overlay();
+	draw_menu_overlay();
 
 	return 0;
 }
 
-void display_pause_overlay()
+void draw_pause_overlay()
 {
 	// go through every pixel of the gameboy screen and darken it
 	for(uint16_t y = 0; y < LCD_HEIGHT; y++)
@@ -711,11 +712,9 @@ void display_pause_overlay()
 	// print game paused text
 	print_string("Emulation paused", 112, 128, 0, 0xFFFF, 0x0000, 1);
 	print_string("Press [(-)] to continue", 91, 148, 0, 0xFFFF, 0x0000, 1);
-
-	LCD_Refresh();
 }
 
-void display_menu_overlay()
+void draw_menu_overlay()
 {
 	// go through every pixel of the gameboy screen and darken it
 	for(uint16_t y = 0; y < (528 - (LCD_HEIGHT * 2)); y++)
@@ -875,8 +874,6 @@ void draw_emulation_menu(uint8_t selected_tab, uint8_t selected_item, const uint
 	default:
 		break;
 	}
-	
-	LCD_Refresh();
 }
 
 void show_palette_dialog()
