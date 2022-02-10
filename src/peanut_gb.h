@@ -150,6 +150,10 @@
 #define OBJ_FLIP_X          0x20
 #define OBJ_PALETTE         0x10
 
+/* Audio stuff */
+#define AUDIO_MEM_SIZE (0xFF3F - 0xFF10 + 1)
+#define AUDIO_ADDR_COMPENSATION 0xFF10
+
 #define ROM_HEADER_CHECKSUM_LOC	0x014D
 
 #ifndef MIN
@@ -440,6 +444,7 @@ struct gb_s
 	uint8_t vram[VRAM_SIZE];
 	uint8_t hram[HRAM_SIZE];
 	uint8_t oam[OAM_SIZE];
+	uint8_t audio_mem[AUDIO_MEM_SIZE];
 
 	struct
 	{
@@ -635,13 +640,7 @@ uint8_t __gb_read(struct gb_s *gb, const uint_fast16_t addr)
 			return gb->hram[addr - HRAM_ADDR];
 
 		if((addr >= 0xFF10) && (addr <= 0xFF3F))
-		{
-#if ENABLE_SOUND
-			return audio_read(addr);
-#else
-			return 1;
-#endif
-		}
+			return gb->audio_mem[addr - AUDIO_ADDR_COMPENSATION];
 
 		/* IO and Interrupts. */
 		switch(addr & 0xFF)
@@ -863,12 +862,7 @@ void __gb_write(struct gb_s *gb, const uint_fast16_t addr, const uint8_t val)
 		}
 
 		if((addr >= 0xFF10) && (addr <= 0xFF3F))
-		{
-#if ENABLE_SOUND
-			audio_write(addr, val);
-#endif
-			return;
-		}
+			gb->audio_mem[addr - AUDIO_ADDR_COMPENSATION] = val;
 
 		/* IO and Interrupts. */
 		switch(addr & 0xFF)
