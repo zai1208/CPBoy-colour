@@ -1828,8 +1828,10 @@ void show_turbo_dialog()
 	uint32_t key2;
 
 	uint8_t selected_item = 0;
+	uint8_t hold_amount = 0;
 
 	bool button_pressed = true;
+	bool holding_button = false;
 	bool in_menu = true;
 
 	while (in_menu)
@@ -1882,8 +1884,21 @@ void show_turbo_dialog()
 			getKey(&key1, &key2);
 
 			if(!(key1 | key2))
+			{
 				button_pressed = false;
+				holding_button = false;
+			}
+
+			LCD_Refresh(); // LCD_Refresh to create a delay
+
+			if(hold_amount++ > 20 || (holding_button && hold_amount > 3))
+			{
+				holding_button = true;
+				button_pressed = false;
+			}
 		}
+
+		hold_amount = 0;
 
 		getKey(&key1, &key2);
 
