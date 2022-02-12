@@ -102,6 +102,8 @@ void draw_emulation_menu(uint8_t selected_tab, uint8_t selected_item, const uint
 void show_palette_dialog();
 void show_edit_palette_dialog(struct palette *palette);
 void show_controls_dialog();
+void show_credits_dialog();
+void show_turbo_dialog();
 void show_select_key_dialog(uint32_t *key_controls);
 void draw_color_edit_panel(uint16_t x, uint16_t y, uint16_t width, uint8_t selected_color_rect, 
 	char *title, uint16_t *colors, int8_t selected_item);
@@ -180,6 +182,10 @@ bool controls_changed;
 
 int dirFiles = 0;
 
+bool turbo_enabled = false;
+const uint8_t turbo_max = 48;
+uint8_t turbo_amount = 24;
+
 extern "C"
 void main()
 {
@@ -225,11 +231,17 @@ void main()
 		// render
 		fillScreen(color(0, 0, 0));
 
-		Debug_Printf(0, 25 + menuIndex, true, 0, ">");
-		Debug_Printf(0, 24, true, 0, "Detected ROMs (in \\fls0\\roms)");
+		const uint16_t color_success = 0x07E0;
+
+		print_string("CPBOY", 124, 8, 1, 0x001F, 0x0000, 1); // color(0, 0, 255)
+		print_string("Version 0.0.2-alpha", 100, 44, 0, 0xF800, 0x0000, 1); // color(255, 0, 0)
+		// print_string("[Dev Build]", 124, 64, 0, 0xFFE0, 0x0000, 1); // color(255, 255, 0)
+
+		Debug_Printf(0, 9 + menuIndex, true, 0, ">");
+		Debug_Printf(0, 8, true, 0, "Detected ROMs (in \\fls0\\roms)");
 
 		for (int i = 0; i < dirFiles; i++)
-			Debug_Printf(2, 25 + i, true, 0, "%i. %s", i + 1, fileNames[i]);
+			Debug_Printf(2, 9 + i, true, 0, "%i. %s", i + 1, fileNames[i]);
 
 		LCD_Refresh();
 		
@@ -377,6 +389,7 @@ void executeRom()
 	uint32_t key2;
 	uint32_t frame = 1;
 	uint8_t draw_frame = 0;
+	uint8_t turbo = 0;
 
 	while (1)
 	{
@@ -404,6 +417,20 @@ void executeRom()
 				error_print("Frameskip on");
 			else
 				error_print("Frameskip off");
+		}
+
+		if(testKey(key1, key2, KEY_MULTIPLY))
+		{
+			turbo_enabled = !turbo_enabled;
+			if(turbo_enabled)
+			{
+				turbo = turbo_amount;
+				error_print("Turbo on");
+			}
+			else
+			{
+				error_print("Turbo off");
+			}
 		}
 
 		if(testKey(key1, key2, KEY_BACKSPACE))
@@ -445,6 +472,22 @@ void executeRom()
 		/* Check if display should be updated */
 		if(gb.direct.frame_skip)
 		{
+			/* Check if turbo mode is enabled */
+			if (turbo_enabled)
+			{
+				if (turbo > 0)
+				{
+					turbo--;
+					draw_frame = 1;
+				}
+				else
+				{
+					turbo = turbo_amount;
+					draw_frame = 0;
+				}
+
+			}
+			
 			draw_frame = !draw_frame;
 
 			if(!draw_frame)
@@ -553,7 +596,7 @@ uint8_t emulation_menu()
 	bool in_menu = true;
 	bool button_pressed = true;
 
-	uint8_t item_counts[tab_count] = { 4, 1, 1, 2 };
+	uint8_t item_counts[tab_count] = { 5, 1, 1, 3 };
 
 	uint8_t selected_tab = 0;
 	uint8_t selected_item = 0;
@@ -653,8 +696,13 @@ uint8_t emulation_menu()
 
 					priv.selected_palette = color_palettes[current_palette].data;
 					break;
-
+					
 				case 3:
+					// edit turbo mode
+					show_turbo_dialog();
+					break;
+
+				case 4:
 					return 1;
 				
 				default:
@@ -670,6 +718,9 @@ uint8_t emulation_menu()
 				case 1:
 					show_controls_dialog();
 					break;				
+				case 2:
+					show_credits_dialog();
+					break;
 				default:
 					break;
 				}
@@ -844,8 +895,15 @@ void draw_emulation_menu(uint8_t selected_tab, uint8_t selected_item, const uint
 			print_string(color_palettes[current_palette].name, 312 - (strlen(color_palettes[current_palette].name) * 6),
 			 	main_y + 72, 0, color_success, 0x0000, 1);
 
-			strcpy(title_string, " Quit CPBoy                                           ");
+			strcpy(title_string, " Turbo Mode                                            ");
 			print_string(title_string, 0, main_y + 86, 0, 0xFFFF, (selected_item == 3) * 0x8410, 1);
+
+			strcpy(title_string, (turbo_enabled)? "Enabled" : "Disabled");
+			print_string(title_string, 264 + (turbo_enabled * 3), main_y + 86, 0, 
+				(color_success * turbo_enabled) + (color_danger * !turbo_enabled), 0x0000, 1);
+
+			strcpy(title_string, " Quit CPBoy                                           ");
+			print_string(title_string, 0, main_y + 100, 0, 0xFFFF, (selected_item == 4) * 0x8410, 1);
 
 			break;
 		}
@@ -868,6 +926,9 @@ void draw_emulation_menu(uint8_t selected_tab, uint8_t selected_item, const uint
 
 			strcpy(title_string, " Controls                                             ");
 			print_string(title_string, 0, main_y + 58, 0, 0xFFFF, (selected_item == 1) * 0x8410, 1);
+
+			strcpy(title_string, " Credits                                              ");
+			print_string(title_string, 0, main_y + 72, 0, 0xFFFF, (selected_item == 2) * 0x8410, 1);
 
 			break;
 		}
@@ -1650,6 +1711,243 @@ void show_controls_dialog()
 		for(uint16_t x = 0; x < 320; x++)
 			vram[(y * 320) + x] = lcd_bak[y][x];
 	}
+}
+
+void show_credits_dialog()
+{
+	uint16_t lcd_bak[528][320];
+
+	// backup lcd
+	for(uint16_t y = 0; y < 528; y++)
+	{
+		for(uint16_t x = 0; x < 320; x++)
+			lcd_bak[y][x] = vram[(y * 320) + x];
+	}
+
+	const uint8_t CREDIT_LINES = 6;
+	const uint16_t subtitle_fg = 0xB5B6;
+	const uint16_t dialog_width = 260;
+	const uint16_t dialog_height = 82 + (CREDIT_LINES * 14);
+	const uint16_t dialog_y = (528 - dialog_height) / 2;
+	const uint16_t dialog_x = (320 - dialog_width) / 2;
+	const uint16_t dialog_border = 0x04A0;
+	const uint16_t dialog_bg = 0x2104;
+
+	uint32_t key1;
+	uint32_t key2;
+
+	bool button_pressed = true;
+	bool in_menu = true;
+
+	while (in_menu)
+	{
+		// draw dialog background
+		for (uint16_t y = 0; y < dialog_height; y++)
+		{
+			for (uint16_t x = 0; x < dialog_width; x++)
+			{
+				if(y == 0 || y == (dialog_height - 1) || x == 0 || x == (dialog_width - 1))
+					vram[((y + dialog_y) * (LCD_WIDTH * 2)) + x + dialog_x] = dialog_border;
+				else
+					vram[((y + dialog_y) * (LCD_WIDTH * 2)) + x + dialog_x] = dialog_bg;
+			}
+		}
+
+		// draw title
+		print_string("Credits", 135, dialog_y + 5, 0, dialog_border, 0x0000, 1);
+
+		// draw subtitle
+		print_string("Version 0.0.2-alpha", 100, dialog_y + 23, 0, subtitle_fg, 0x0000, 1);
+
+		// draw credits
+		print_string("Built on github.com/deltabeard/Peanut-GB", dialog_x + 8, dialog_y + 51, 0, 0xFFFF, 0x0000, 1);
+		print_string("Source at github.com/diddyholz/CPBoy", dialog_x + 8, dialog_y + 51 + 14, 0, 0xFFFF, 0x0000, 1);
+		// forth line intentionally left blank (dialog_y + 28)
+		print_string("Contributors", dialog_x + 8, dialog_y + 51 + 42, 0, 0xFFFF, 0x0000, 1);
+		print_string("diddyholz (Sidney Krombholz)", dialog_x + 8, dialog_y + 51 + 56, 0, 0xFFFF, 0x0000, 1);
+		print_string("s3ansh33p (Sean McGinty)", dialog_x + 8, dialog_y + 51 + 70, 0, 0xFFFF, 0x0000, 1);
+			
+		// draw action buttons
+		print_string("      Done      ", 111, dialog_y + (CREDIT_LINES * 14) + 63, 0, 
+			0xFFFF, 0x8410, 1);
+
+		LCD_Refresh();
+
+		// Wait for release
+		while(button_pressed) 
+		{ 
+			getKey(&key1, &key2);
+
+			if(!(key1 | key2))
+				button_pressed = false;
+		}
+
+		getKey(&key1, &key2);
+
+		if(testKey(key1, key2, KEY_EXE))
+		{
+			button_pressed = true;
+			in_menu = false;
+		}
+	}
+
+	// restore lcd
+	for(uint16_t y = 0; y < 528; y++)
+	{
+		for(uint16_t x = 0; x < 320; x++)
+			vram[(y * 320) + x] = lcd_bak[y][x];
+	}
+	
+}
+
+void show_turbo_dialog()
+{
+	uint16_t lcd_bak[528][320];
+
+	// backup lcd
+	for(uint16_t y = 0; y < 528; y++)
+	{
+		for(uint16_t x = 0; x < 320; x++)
+			lcd_bak[y][x] = vram[(y * 320) + x];
+	}
+
+	const uint8_t TURBO_LINES = 2;
+	const uint16_t subtitle_fg = 0xB5B6;
+	const uint16_t dialog_width = 200;
+	const uint16_t dialog_height = 82 + (TURBO_LINES * 14);
+	const uint16_t dialog_y = (528 - dialog_height) / 2;
+	const uint16_t dialog_x = (320 - dialog_width) / 2;
+	const uint16_t dialog_border = 0x04A0;
+	const uint16_t dialog_bg = 0x2104;
+
+	const uint16_t item_selected_color = 0x04A0;
+	const uint16_t slider_track_color = 0xB5B6;
+	const uint16_t slider_offset = 42;
+
+	uint32_t key1;
+	uint32_t key2;
+
+	uint8_t selected_item = 0;
+
+	bool button_pressed = true;
+	bool in_menu = true;
+
+	while (in_menu)
+	{
+		// draw dialog background
+		for (uint16_t y = 0; y < dialog_height; y++)
+		{
+			for (uint16_t x = 0; x < dialog_width; x++)
+			{
+				if(y == 0 || y == (dialog_height - 1) || x == 0 || x == (dialog_width - 1))
+					vram[((y + dialog_y) * (LCD_WIDTH * 2)) + x + dialog_x] = dialog_border;
+				else
+					vram[((y + dialog_y) * (LCD_WIDTH * 2)) + x + dialog_x] = dialog_bg;
+			}
+		}
+
+		// draw title
+		print_string("Turbo Mode", 135, dialog_y + 5, 0, dialog_border, 0x0000, 1);
+
+		// draw subtitle
+		print_string("Experimental Feature", 100, dialog_y + 23, 0, subtitle_fg, 0x0000, 1);
+
+		// draw turbo enabled
+		if (turbo_enabled)
+		{
+			print_string("Enabled", (320 - (7 * 6)) / 2, 
+				dialog_y + 51, 0, 0x07E0, (selected_item == 0) * 0x8410, 1);	
+		}
+		else 
+		{
+			print_string("Disabled", (320 - (8 * 6)) / 2, 
+				dialog_y + 51, 0, 0xF800, (selected_item == 0) * 0x8410, 1);	
+		}
+
+		// draw turbo slider
+		print_string("Turbo", dialog_x + 5, dialog_y + 65, 0, 0xFFFF, 0x0000, 1);
+		draw_slider(dialog_x + slider_offset, dialog_y + 65, dialog_width - slider_offset - 7, slider_track_color, 
+		((selected_item == 1) * item_selected_color) + (!(selected_item == 1) * 0xFFFF), 
+			turbo_max, turbo_amount);
+			
+		// draw action buttons
+		print_string("      Done      ", 111, dialog_y + (TURBO_LINES * 14) + 63, 0, 
+			0xFFFF, (selected_item == 2) * 0x8410, 1);
+
+		LCD_Refresh();
+
+		// Wait for release
+		while(button_pressed) 
+		{ 
+			getKey(&key1, &key2);
+
+			if(!(key1 | key2))
+				button_pressed = false;
+		}
+
+		getKey(&key1, &key2);
+
+		if(testKey(key1, key2, KEY_UP))
+		{
+			button_pressed = true;
+
+			if(selected_item != 0)
+				selected_item--;
+		}
+		
+		if(testKey(key1, key2, KEY_DOWN))
+		{
+			button_pressed = true;
+
+			if(selected_item != 2)
+				selected_item++;
+		}
+
+		if(testKey(key1, key2, KEY_LEFT))
+		{
+			button_pressed = true;
+
+			if(selected_item == 1)
+			{
+				if(turbo_amount > 1)
+					turbo_amount--;
+			}
+		}
+
+		if(testKey(key1, key2, KEY_RIGHT))
+		{
+			button_pressed = true;
+
+			if(selected_item == 1)
+			{
+				if(turbo_amount < turbo_max)
+					turbo_amount++;
+			}
+		}
+
+		if(testKey(key1, key2, KEY_EXE))
+		{
+			
+			if (selected_item == 0)
+			{
+				button_pressed = true;
+				turbo_enabled = !turbo_enabled;
+			}
+			else if (selected_item == 2)
+			{
+				button_pressed = true;
+				in_menu = false;
+			}
+		}
+	}
+
+	// restore lcd
+	for(uint16_t y = 0; y < 528; y++)
+	{
+		for(uint16_t x = 0; x < 320; x++)
+			vram[(y * 320) + x] = lcd_bak[y][x];
+	}
+	
 }
 
 void show_select_key_dialog(uint32_t *key_controls)
