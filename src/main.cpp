@@ -657,6 +657,10 @@ uint8_t emulation_menu()
 
 			if(selected_item != 0)
 				selected_item--;
+
+			// check if on "current" tab and turbo mode can be selected
+			if(!gb.direct.frame_skip && selected_tab == TAB_INFO && selected_item == 1)
+				selected_item = 0;
 		}
 		
 		if(testKey(key1, key2, KEY_DOWN))
@@ -665,6 +669,10 @@ uint8_t emulation_menu()
 
 			if(selected_item != (item_counts[selected_tab] - 1))
 				selected_item++;
+
+			// check if on "current" tab and turbo mode can be selected
+			if(!gb.direct.frame_skip && selected_tab == TAB_INFO && selected_item == 1)
+				selected_item = 2;
 		}
 		
 		if(testKey(key1, key2, KEY_EXE))
@@ -681,13 +689,18 @@ uint8_t emulation_menu()
 					// toggle frameskipping
 					gb.direct.frame_skip = !gb.direct.frame_skip;
 					break;
-
+					
 				case 1:
+					// edit turbo mode
+					show_turbo_dialog();
+					break;
+
+				case 2:
 					// toggle interlacing
 					gb.direct.interlace = !gb.direct.interlace;
 					break;
 
-				case 2:
+				case 3:
 					// switch color palette
 					current_palette++;
 
@@ -695,11 +708,6 @@ uint8_t emulation_menu()
 						current_palette = 0;
 
 					priv.selected_palette = color_palettes[current_palette].data;
-					break;
-					
-				case 3:
-					// edit turbo mode
-					show_turbo_dialog();
 					break;
 
 				case 4:
@@ -800,6 +808,7 @@ void draw_emulation_menu(uint8_t selected_tab, uint8_t selected_item, const uint
 	const uint16_t bottom_bar_selected = 0x04A0;
 	const uint16_t color_success = 0x07E0;
 	const uint16_t color_danger = 0xF800;
+	const uint16_t color_disabled = 0xB5B6;
 
 	// fill menu part of screen
 	for(uint16_t y = 0; y < main_height; y++)
@@ -882,28 +891,30 @@ void draw_emulation_menu(uint8_t selected_tab, uint8_t selected_item, const uint
 			print_string(title_string, 264 + (gb.direct.frame_skip * 3), main_y + 44, 0, 
 				(color_success * gb.direct.frame_skip) + (color_danger * !gb.direct.frame_skip), 0x0000, 1);
 
+			strcpy(title_string, " Turbo Mode                                            ");
+			print_string(title_string, 0, main_y + 58, 0, (gb.direct.frame_skip * 0xFFFF) + (!gb.direct.frame_skip * color_disabled), 
+				(selected_item == 1) * 0x8410, 1);
+
+			strcpy(title_string, (turbo_enabled)? "Enabled" : "Disabled");
+			print_string(title_string, 264 + (turbo_enabled * 3), main_y + 58, 0, 
+				(gb.direct.frame_skip * ((color_success * turbo_enabled) + (color_danger * !turbo_enabled))) + !gb.direct.frame_skip * color_disabled, 
+				0x0000, 1);
+
 			strcpy(title_string, " Interlacing                                          ");
-			print_string(title_string, 0, main_y + 58, 0, 0xFFFF, (selected_item == 1) * 0x8410, 1);
+			print_string(title_string, 0, main_y + 72, 0, 0xFFFF, (selected_item == 2) * 0x8410, 1);
 
 			strcpy(title_string, (gb.direct.interlace)? "Enabled" : "Disabled");
-			print_string(title_string, 264 + (gb.direct.interlace * 3), main_y + 58, 0, 
+			print_string(title_string, 264 + (gb.direct.interlace * 3), main_y + 72, 0, 
 				(color_success * gb.direct.interlace) + (color_danger * !gb.direct.interlace), 0x0000, 1);
 
 			strcpy(title_string, " Color Palette                                        ");
-			print_string(title_string, 0, main_y + 72, 0, 0xFFFF, (selected_item == 2) * 0x8410, 1);
-
-			print_string(color_palettes[current_palette].name, 312 - (strlen(color_palettes[current_palette].name) * 6),
-			 	main_y + 72, 0, color_success, 0x0000, 1);
-
-			strcpy(title_string, " Turbo Mode                                            ");
 			print_string(title_string, 0, main_y + 86, 0, 0xFFFF, (selected_item == 3) * 0x8410, 1);
 
-			strcpy(title_string, (turbo_enabled)? "Enabled" : "Disabled");
-			print_string(title_string, 264 + (turbo_enabled * 3), main_y + 86, 0, 
-				(color_success * turbo_enabled) + (color_danger * !turbo_enabled), 0x0000, 1);
+			print_string(color_palettes[current_palette].name, 312 - (strlen(color_palettes[current_palette].name) * 6),
+			 	main_y + 86, 0, color_success, 0x0000, 1);
 
 			strcpy(title_string, " Quit CPBoy                                           ");
-			print_string(title_string, 0, main_y + 100, 0, 0xFFFF, (selected_item == 4) * 0x8410, 1);
+			print_string(title_string, 0, main_y + 114, 0, 0xFFFF, (selected_item == 4) * 0x8410, 1);
 
 			break;
 		}
