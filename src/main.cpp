@@ -235,7 +235,7 @@ void main()
 
 		print_string("CPBOY", 124, 8, 1, 0x001F, 0x0000, 1); // color(0, 0, 255)
 		print_string("Version 0.0.2-alpha", 100, 44, 0, 0xF800, 0x0000, 1); // color(255, 0, 0)
-		print_string("[Dev Build]", 124, 64, 0, 0xFFE0, 0x0000, 1); // color(255, 255, 0)
+		// print_string("[Dev Build]", 124, 64, 0, 0xFFE0, 0x0000, 1); // color(255, 255, 0)
 
 		Debug_Printf(0, 9 + menuIndex, true, 0, ">");
 		Debug_Printf(0, 8, true, 0, "Detected ROMs (in \\fls0\\roms)");
@@ -1813,12 +1813,16 @@ void show_turbo_dialog()
 
 	const uint8_t TURBO_LINES = 2;
 	const uint16_t subtitle_fg = 0xB5B6;
-	const uint16_t dialog_width = 260;
+	const uint16_t dialog_width = 200;
 	const uint16_t dialog_height = 82 + (TURBO_LINES * 14);
 	const uint16_t dialog_y = (528 - dialog_height) / 2;
 	const uint16_t dialog_x = (320 - dialog_width) / 2;
 	const uint16_t dialog_border = 0x04A0;
 	const uint16_t dialog_bg = 0x2104;
+
+	const uint16_t item_selected_color = 0x04A0;
+	const uint16_t slider_track_color = 0xB5B6;
+	const uint16_t slider_offset = 42;
 
 	uint32_t key1;
 	uint32_t key2;
@@ -1846,27 +1850,36 @@ void show_turbo_dialog()
 		print_string("Turbo Mode", 135, dialog_y + 5, 0, dialog_border, 0x0000, 1);
 
 		// draw subtitle
-		print_string("Use [LEFT] and [RIGHT]", 100, dialog_y + 23, 0, subtitle_fg, 0x0000, 1);
+		print_string("Experimental Feature", 100, dialog_y + 23, 0, subtitle_fg, 0x0000, 1);
 
 		// draw credits
 
-		// enabled
-		print_string("Enabled           ", (320 - (18 * 6)) / 2 + 9, 
-				dialog_y + 51, 0, (turbo_enabled) * 0x07E0 + (!turbo_enabled) * 0xFFFF, (selected_item == 0) * 0x8410, 1);
-		// enabled / disabled divider
-		print_string("/", (320) / 2, 
-				dialog_y + 51, 0, 0xFFFF, (selected_item == 0) * 0x8410, 1);
-		// disabled
-		print_string("Disabled", (320 - (18 * 6)) / 2 + (9 * 8), 
-				dialog_y + 51, 0, (turbo_enabled) * 0xFFFF + (!turbo_enabled) * 0xF800, (selected_item == 0) * 0x8410, 1);
+		// // enabled
+		// print_string("Enabled           ", (320 - (18 * 6)) / 2 + 9, 
+		// 		dialog_y + 51, 0, (turbo_enabled) * 0x07E0 + (!turbo_enabled) * 0xFFFF, (selected_item == 0) * 0x8410, 1);
+		// // enabled / disabled divider
+		// print_string("/", (320) / 2, 
+		// 		dialog_y + 51, 0, 0xFFFF, (selected_item == 0) * 0x8410, 1);
+		// // disabled
+		// print_string("Disabled", (320 - (18 * 6)) / 2 + (9 * 7), 
+		// 		dialog_y + 51, 0, (turbo_enabled) * 0xFFFF + (!turbo_enabled) * 0xF800, (selected_item == 0) * 0x8410, 1);
 
+		if (turbo_enabled)
+		{
+			print_string("Enabled", (320 - (7 * 6)) / 2, 
+				dialog_y + 51, 0, 0x07E0, (selected_item == 0) * 0x8410, 1);	
+		}
+		else 
+		{
+			print_string("Disabled", (320 - (8 * 6)) / 2, 
+				dialog_y + 51, 0, 0xF800, (selected_item == 0) * 0x8410, 1);	
+		}
 
-		// to be refined
-		print_string("Turbo Amount", (320 - (13 * 6)) / 2, 
-				dialog_y + 65, 0, 0xFFFF, (selected_item == 1) * 0x8410, 1);
-
-		print_string("24", (320 - (13 * 6)) / 2 + (13 * 6), 
-				dialog_y + 65, 0, 0xFFFF, (selected_item == 1) * 0x8410, 1);
+		// turbo slider
+		print_string("Turbo", dialog_x + 5, dialog_y + 65, 0, 0xFFFF, 0x0000, 1);
+		draw_slider(dialog_x + slider_offset, dialog_y + 65, dialog_width - slider_offset - 7, slider_track_color, 
+		((selected_item == 1) * item_selected_color) + (!(selected_item == 1) * 0xFFFF), 
+			turbo_max, turbo_amount);
 			
 		// draw action buttons
 		print_string("      Done      ", 111, dialog_y + (TURBO_LINES * 14) + 63, 0, 
@@ -1905,11 +1918,7 @@ void show_turbo_dialog()
 		{
 			button_pressed = true;
 
-			if(selected_item == 0)
-			{
-				turbo_enabled = true;
-			}
-			else if(selected_item == 1)
+			if(selected_item == 1)
 			{
 				if(turbo_amount > 1)
 					turbo_amount--;
@@ -1920,11 +1929,7 @@ void show_turbo_dialog()
 		{
 			button_pressed = true;
 
-			if(selected_item == 0)
-			{
-				turbo_enabled = false;
-			}
-			else if(selected_item == 1)
+			if(selected_item == 1)
 			{
 				if(turbo_amount < turbo_max)
 					turbo_amount++;
@@ -1933,7 +1938,13 @@ void show_turbo_dialog()
 
 		if(testKey(key1, key2, KEY_EXE))
 		{
-			if (selected_item == 2)
+			
+			if (selected_item == 0)
+			{
+				button_pressed = true;
+				turbo_enabled = !turbo_enabled;
+			}
+			else if (selected_item == 2)
 			{
 				button_pressed = true;
 				in_menu = false;
