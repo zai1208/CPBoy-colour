@@ -1852,18 +1852,7 @@ void show_turbo_dialog()
 		// draw subtitle
 		print_string("Experimental Feature", 100, dialog_y + 23, 0, subtitle_fg, 0x0000, 1);
 
-		// draw credits
-
-		// // enabled
-		// print_string("Enabled           ", (320 - (18 * 6)) / 2 + 9, 
-		// 		dialog_y + 51, 0, (turbo_enabled) * 0x07E0 + (!turbo_enabled) * 0xFFFF, (selected_item == 0) * 0x8410, 1);
-		// // enabled / disabled divider
-		// print_string("/", (320) / 2, 
-		// 		dialog_y + 51, 0, 0xFFFF, (selected_item == 0) * 0x8410, 1);
-		// // disabled
-		// print_string("Disabled", (320 - (18 * 6)) / 2 + (9 * 7), 
-		// 		dialog_y + 51, 0, (turbo_enabled) * 0xFFFF + (!turbo_enabled) * 0xF800, (selected_item == 0) * 0x8410, 1);
-
+		// draw turbo enabled
 		if (turbo_enabled)
 		{
 			print_string("Enabled", (320 - (7 * 6)) / 2, 
@@ -1875,7 +1864,7 @@ void show_turbo_dialog()
 				dialog_y + 51, 0, 0xF800, (selected_item == 0) * 0x8410, 1);	
 		}
 
-		// turbo slider
+		// draw turbo slider
 		print_string("Turbo", dialog_x + 5, dialog_y + 65, 0, 0xFFFF, 0x0000, 1);
 		draw_slider(dialog_x + slider_offset, dialog_y + 65, dialog_width - slider_offset - 7, slider_track_color, 
 		((selected_item == 1) * item_selected_color) + (!(selected_item == 1) * 0xFFFF), 
