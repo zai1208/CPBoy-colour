@@ -422,6 +422,7 @@ void executeRom()
 		if(testKey(key1, key2, KEY_MULTIPLY))
 		{
 			turbo_enabled = !turbo_enabled;
+
 			if(turbo_enabled)
 			{
 				turbo = turbo_amount;
@@ -485,7 +486,6 @@ void executeRom()
 					turbo = turbo_amount;
 					draw_frame = 0;
 				}
-
 			}
 			
 			draw_frame = !draw_frame;
@@ -1814,7 +1814,7 @@ void show_turbo_dialog()
 	const uint8_t TURBO_LINES = 2;
 	const uint16_t subtitle_fg = 0xB5B6;
 	const uint16_t dialog_width = 200;
-	const uint16_t dialog_height = 82 + (TURBO_LINES * 14);
+	const uint16_t dialog_height = 84 + (TURBO_LINES * 14);
 	const uint16_t dialog_y = (528 - dialog_height) / 2;
 	const uint16_t dialog_x = (320 - dialog_width) / 2;
 	const uint16_t dialog_border = 0x04A0;
@@ -1847,31 +1847,31 @@ void show_turbo_dialog()
 		}
 
 		// draw title
-		print_string("Turbo Mode", 135, dialog_y + 5, 0, dialog_border, 0x0000, 1);
+		print_string("Turbo Mode", 129, dialog_y + 5, 0, dialog_border, 0x0000, 1);
 
 		// draw subtitle
-		print_string("Experimental Feature", 100, dialog_y + 23, 0, subtitle_fg, 0x0000, 1);
+		print_string("Experimental Feature", 99, dialog_y + 23, 0, subtitle_fg, 0x0000, 1);
 
 		// draw turbo enabled
 		if (turbo_enabled)
 		{
 			print_string("Enabled", (320 - (7 * 6)) / 2, 
-				dialog_y + 51, 0, 0x07E0, (selected_item == 0) * 0x8410, 1);	
+				dialog_y + 50, 0, 0x07E0, (selected_item == 0) * 0x8410, 1);	
 		}
 		else 
 		{
 			print_string("Disabled", (320 - (8 * 6)) / 2, 
-				dialog_y + 51, 0, 0xF800, (selected_item == 0) * 0x8410, 1);	
+				dialog_y + 50, 0, 0xF800, (selected_item == 0) * 0x8410, 1);	
 		}
 
 		// draw turbo slider
-		print_string("Turbo", dialog_x + 5, dialog_y + 65, 0, 0xFFFF, 0x0000, 1);
-		draw_slider(dialog_x + slider_offset, dialog_y + 65, dialog_width - slider_offset - 7, slider_track_color, 
+		print_string("Turbo", dialog_x + 5, dialog_y + 66, 0, 0xFFFF, 0x0000, 1);
+		draw_slider(dialog_x + slider_offset, dialog_y + 68, dialog_width - slider_offset - 7, slider_track_color, 
 		((selected_item == 1) * item_selected_color) + (!(selected_item == 1) * 0xFFFF), 
 			turbo_max, turbo_amount);
 			
 		// draw action buttons
-		print_string("      Done      ", 111, dialog_y + (TURBO_LINES * 14) + 63, 0, 
+		print_string("      Done      ", 111, dialog_y + (TURBO_LINES * 14) + 65, 0, 
 			0xFFFF, (selected_item == 2) * 0x8410, 1);
 
 		LCD_Refresh();
