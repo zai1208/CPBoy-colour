@@ -2713,7 +2713,7 @@ void get_cart_ram_file_name(char *name_buffer)
  */
 void get_rom_config_file_name(char *name_buffer)
 {
-	strcpy(name_buffer, "\\fls0\\CPBoy\\user");
+	strcpy(name_buffer, "\\fls0\\CPBoy\\user\\");
 
 	char temp[17];
 
