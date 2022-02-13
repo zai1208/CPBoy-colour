@@ -2347,6 +2347,10 @@ void load_controls(uint32_t (*controls_ptr)[2])
 int8_t save_rom_config(bool frameskip, bool interlace, bool turbo_e, 
 	uint8_t turbo_a, uint8_t current_pal)
 {
+	// make user directory
+	mkdir("\\fls0\\CPBoy");
+	mkdir("\\fls0\\CPBoy\\user");
+
 	char rom_config_file_name[38];
 
 	get_rom_config_file_name(rom_config_file_name);
