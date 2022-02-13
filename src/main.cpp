@@ -736,12 +736,14 @@ uint8_t emulation_menu()
 				}
 				break;
 			case TAB_LOAD_ROM:
+			{
 				char file_name[200] = "\\fls0\\roms\\";
 				strcat(file_name, fileNames[selected_item]);
 
 				current_filename = selected_item;
 
 				return MENU_LOAD_NEW;
+			}
 			case TAB_SETTINGS:
 				switch (selected_item)
 				{
