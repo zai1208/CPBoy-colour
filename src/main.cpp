@@ -121,6 +121,7 @@ int8_t save_controls(uint32_t (*controls_ptr)[2]);
 void load_controls(uint32_t (*controls_ptr)[2]);
 bool get_game_palette(uint8_t game_checksum, uint16_t (*game_palette)[4]);
 void *memcpy(void *dest, const void *src, size_t count);
+void load_rom(char *file_name);
 
 InputScancode scancodes[] = 
 {
@@ -275,11 +276,34 @@ void main()
 		}
 	}
 
+	// load rom
+	load_rom(rom_file_name);
+
+	// save cart rom
+	char cart_ram_file_name[37];
+
+	get_cart_ram_file_name(cart_ram_file_name);
+
+	// When rom is fully executed, save ram and cleanup
+	write_cart_ram_file(cart_ram_file_name, &priv.cart_ram, gb_get_save_size(&gb));
+
+	free(priv.cart_ram);
+	free(priv.rom);
+	free(color_palettes);
+
+	// save user stuff
+	if(controls_changed)
+		save_controls(controls);
+
+	calcEnd();
+}
+
+void load_rom(char *file_name) {
 	fillScreen(color(0, 0, 0));
 	Debug_Printf(0, 0, false, 0, "Loading ROM");
 	LCD_Refresh();
 
-	priv.rom = read_rom_to_ram(rom_file_name);
+	priv.rom = read_rom_to_ram(file_name);
 
 	if(priv.rom == NULL)
 	{
@@ -299,24 +323,6 @@ void main()
 	draw_menu_overlay();
 
 	executeRom();
-
-	// save cart rom
-	char cart_ram_file_name[37];
-
-	get_cart_ram_file_name(cart_ram_file_name);
-
-	// When rom is fully executed, save ram and cleanup
-	write_cart_ram_file(cart_ram_file_name, &priv.cart_ram, gb_get_save_size(&gb));
-
-	free(priv.cart_ram);
-	free(priv.rom);
-	free(color_palettes);
-
-	// save user stuff
-	if(controls_changed)
-		save_controls(controls);
-
-	calcEnd();
 }
 
 uint8_t initEmulator()
@@ -596,7 +602,7 @@ uint8_t emulation_menu()
 	bool in_menu = true;
 	bool button_pressed = true;
 
-	uint8_t item_counts[tab_count] = { 5, 1, 1, 3 };
+	uint8_t item_counts[tab_count] = { 5, 1, dirFiles, 3 };
 
 	uint8_t selected_tab = 0;
 	uint8_t selected_item = 0;
@@ -715,6 +721,17 @@ uint8_t emulation_menu()
 				
 				default:
 					break;
+				}
+				break;
+			case TAB_LOAD_ROM:
+				if (selected_item == 1)
+				{
+					show_credits_dialog();
+				} else {
+					char file_name[200] = "\\fls0\\roms\\";
+					strcat(file_name, fileNames[selected_item]);
+					current_filename = selected_item;
+					load_rom(file_name);
 				}
 				break;
 			case TAB_SETTINGS:
@@ -915,6 +932,36 @@ void draw_emulation_menu(uint8_t selected_tab, uint8_t selected_item, const uint
 
 			strcpy(title_string, " Quit CPBoy                                           ");
 			print_string(title_string, 0, main_y + 114, 0, 0xFFFF, (selected_item == 4) * 0x8410, 1);
+
+			break;
+		}
+	case TAB_LOAD_ROM:
+		{
+			char title_string[200];
+
+			// draw settings title
+			for(uint16_t y = 0; y < 37; y++)
+			{
+				for(uint16_t x = 0; x < (LCD_WIDTH * 2); x++)
+					vram[((main_y + y) * (LCD_WIDTH * 2) + x)] = bottom_bar_selected;
+			}
+
+			char numFiles[40];
+			convert_byte_to_string(dirFiles, numFiles);
+			strcat(numFiles, " detected ROMs (in \\fls0\\roms)");
+
+			print_string(numFiles, 6, main_y + 12, 0, 0x0000, 0x0000, 1);
+
+			// draw interactive menu - todo: make this work with more than the amount of roms that fit on screen
+			for (uint8_t i = 0; i < dirFiles; i++) {
+				strcpy(title_string, " ");
+				strcat(title_string, fileNames[i]);
+				// fill rest of line with spaces if selected for background
+				if (selected_item == i)
+					for (uint8_t j = strlen(fileNames[i]); j < 52; j++)
+						strcat(title_string, " ");
+				print_string(title_string, 0, main_y + 44 + i*14, 0, 0xFFFF, (selected_item == i) * 0x8410, 1);
+			}
 
 			break;
 		}
