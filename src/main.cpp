@@ -338,12 +338,10 @@ uint8_t load_rom(char *file_name)
 	write_cart_ram_file(cart_ram_file_name, &priv.cart_ram, gb_get_save_size(&gb));
 
 	// save user stuff
-	if(controls_changed)
-		save_controls(controls);
 	if(rom_config_changed)
 		save_rom_config(gb.direct.frame_skip, gb.direct.interlace, turbo_enabled, turbo_amount, current_palette);
 
-  // cleanup
+  	// cleanup
 	if(priv.cart_ram)
 		free(priv.cart_ram);
 
