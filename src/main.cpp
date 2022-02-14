@@ -64,6 +64,9 @@
 #define TAB_LOAD_ROM 		2
 #define TAB_SETTINGS 		3
 
+#define MENU_LOAD_NEW	1
+#define MENU_QUIT			2
+
 #define RGB555_TO_RGB565(rgb555) ( \
 	0 | \
 	((rgb555 & 0b0111110000000000) <<1) | \
@@ -92,7 +95,7 @@ void gb_error(struct gb_s *gb, const enum gb_error_e gb_err, const uint16_t val)
 void gb_cart_ram_write(struct gb_s *gb, const uint_fast32_t addr, const uint8_t val);
 void get_cart_ram_file_name(char *name_buffer);
 void lcd_draw_line(struct gb_s *gb, const uint8_t pixels[160], const uint_fast8_t line);
-void executeRom();
+uint8_t executeRom();
 void findFiles();
 uint8_t initEmulator();
 uint8_t emulation_menu();
@@ -121,7 +124,7 @@ int8_t save_controls(uint32_t (*controls_ptr)[2]);
 void load_controls(uint32_t (*controls_ptr)[2]);
 bool get_game_palette(uint8_t game_checksum, uint16_t (*game_palette)[4]);
 void *memcpy(void *dest, const void *src, size_t count);
-void load_rom(char *file_name);
+uint8_t load_rom(char *file_name);
 
 InputScancode scancodes[] = 
 {
@@ -197,8 +200,6 @@ void main()
 	*/
 	calcInit(); //backup screen and init some variables
 
-	char *rom_file_name = "\\fls0\\roms\\";
-
 	// make save directory
 	mkdir("\\fls0\\gb-saves");
 
@@ -271,25 +272,19 @@ void main()
 			inMenu = false;
 
 			current_filename = menuIndex;
-
-			strcat(rom_file_name, fileNames[menuIndex]);
 		}
 	}
 
-	// load rom
-	load_rom(rom_file_name);
+	while (1)
+	{
+		char rom_file_name[200];
 
-	// save cart rom
-	char cart_ram_file_name[37];
+		strcpy(rom_file_name, "\\fls0\\roms\\");
+		strcat(rom_file_name, fileNames[current_filename]);
 
-	get_cart_ram_file_name(cart_ram_file_name);
-
-	// When rom is fully executed, save ram and cleanup
-	write_cart_ram_file(cart_ram_file_name, &priv.cart_ram, gb_get_save_size(&gb));
-
-	free(priv.cart_ram);
-	free(priv.rom);
-	free(color_palettes);
+		// load and run rom until new should be loaded or the emulator is quit
+		if(load_rom(rom_file_name) == MENU_QUIT) break;
+	}	
 
 	// save user stuff
 	if(controls_changed)
@@ -298,7 +293,8 @@ void main()
 	calcEnd();
 }
 
-void load_rom(char *file_name) {
+uint8_t load_rom(char *file_name) 
+{
 	fillScreen(color(0, 0, 0));
 	Debug_Printf(0, 0, false, 0, "Loading ROM");
 	LCD_Refresh();
@@ -308,21 +304,42 @@ void load_rom(char *file_name) {
 	if(priv.rom == NULL)
 	{
 		error_print("Error while reading ROM");
-		calcEnd();
-		return;
+		return MENU_QUIT;
 	}
 
 	if(!initEmulator())
 	{
-		calcEnd();
-		return;
+		error_print("Error while reading ROM");
+		return MENU_QUIT;
 	}
 
 	// draw menu and its overlay
 	draw_emulation_menu(0, 0, 4);
 	draw_menu_overlay();
 
-	executeRom();
+	// run until rom is closed
+	uint8_t menu_code = executeRom();
+	
+	// save cart rom
+	char cart_ram_file_name[37];
+
+	get_cart_ram_file_name(cart_ram_file_name);
+
+	// When rom is fully executed, save ram and cleanup
+	write_cart_ram_file(cart_ram_file_name, &priv.cart_ram, gb_get_save_size(&gb));
+
+	// cleanup
+	if(priv.cart_ram)
+		free(priv.cart_ram);
+
+	free(priv.rom);
+	free(color_palettes);
+
+	priv.cart_ram = NULL;
+	priv.rom = NULL;
+	color_palettes = NULL;
+
+	return menu_code;
 }
 
 uint8_t initEmulator()
@@ -389,7 +406,7 @@ uint8_t initEmulator()
 	return 1;
 }
 
-void executeRom() 
+uint8_t executeRom() 
 {
 	uint32_t key1;
 	uint32_t key2;
@@ -452,8 +469,10 @@ void executeRom()
 
 		if(testKey(key1, key2, KEY_NEGATIVE))
 		{
-			if(emulation_menu())
-				return;
+			uint8_t menu_code = emulation_menu();
+
+			if((menu_code == MENU_LOAD_NEW) || (menu_code == MENU_QUIT))
+				return menu_code;
 		}
 
 		/* 
@@ -717,23 +736,18 @@ uint8_t emulation_menu()
 					break;
 
 				case 4:
-					return 1;
+					return MENU_QUIT;
 				
 				default:
 					break;
 				}
 				break;
 			case TAB_LOAD_ROM:
-				if (selected_item == 1)
-				{
-					show_credits_dialog();
-				} else {
-					char file_name[200] = "\\fls0\\roms\\";
-					strcat(file_name, fileNames[selected_item]);
-					current_filename = selected_item;
-					load_rom(file_name);
-				}
-				break;
+			{
+				current_filename = selected_item;
+
+				return MENU_LOAD_NEW;
+			}
 			case TAB_SETTINGS:
 				switch (selected_item)
 				{
