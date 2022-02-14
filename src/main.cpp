@@ -328,9 +328,16 @@ uint8_t load_rom(char *file_name)
 	// When rom is fully executed, save ram and cleanup
 	write_cart_ram_file(cart_ram_file_name, &priv.cart_ram, gb_get_save_size(&gb));
 
-	free(priv.cart_ram);
+	// cleanup
+	if(priv.cart_ram)
+		free(priv.cart_ram);
+
 	free(priv.rom);
 	free(color_palettes);
+
+	priv.cart_ram = NULL;
+	priv.rom = NULL;
+	color_palettes = NULL;
 
 	return menu_code;
 }
@@ -737,9 +744,6 @@ uint8_t emulation_menu()
 				break;
 			case TAB_LOAD_ROM:
 			{
-				char file_name[200] = "\\fls0\\roms\\";
-				strcat(file_name, fileNames[selected_item]);
-
 				current_filename = selected_item;
 
 				return MENU_LOAD_NEW;
