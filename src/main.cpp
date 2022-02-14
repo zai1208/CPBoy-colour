@@ -64,6 +64,9 @@
 #define TAB_LOAD_ROM 		2
 #define TAB_SETTINGS 		3
 
+#define MENU_LOAD_NEW	1
+#define MENU_QUIT			2
+
 #define ROM_CONFIG_SIZE	3
 
 #define RGB555_TO_RGB565(rgb555) ( \
@@ -95,7 +98,7 @@ void gb_cart_ram_write(struct gb_s *gb, const uint_fast32_t addr, const uint8_t 
 void get_cart_ram_file_name(char *name_buffer);
 void get_rom_config_file_name(char *name_buffer);
 void lcd_draw_line(struct gb_s *gb, const uint8_t pixels[160], const uint_fast8_t line);
-void executeRom();
+uint8_t executeRom();
 void findFiles();
 uint8_t initEmulator();
 uint8_t emulation_menu();
@@ -128,6 +131,7 @@ void load_rom_config(bool *frameskip, bool *interlace, bool *turbo_e,
 	uint8_t *turbo_a, uint8_t *current_pal);
 bool get_game_palette(uint8_t game_checksum, uint16_t (*game_palette)[4]);
 void *memcpy(void *dest, const void *src, size_t count);
+uint8_t load_rom(char *file_name);
 
 InputScancode scancodes[] = 
 {
@@ -204,8 +208,6 @@ void main()
 	*/
 	calcInit(); //backup screen and init some variables
 
-	char *rom_file_name = "\\fls0\\roms\\";
-
 	// make save directory
 	mkdir("\\fls0\\gb-saves");
 
@@ -279,36 +281,54 @@ void main()
 			inMenu = false;
 
 			current_filename = menuIndex;
-
-			strcat(rom_file_name, fileNames[menuIndex]);
 		}
 	}
 
+	while (1)
+	{
+		char rom_file_name[200];
+
+		strcpy(rom_file_name, "\\fls0\\roms\\");
+		strcat(rom_file_name, fileNames[current_filename]);
+
+		// load and run rom until new should be loaded or the emulator is quit
+		if(load_rom(rom_file_name) == MENU_QUIT) break;
+	}	
+
+	// save user stuff
+	if(controls_changed)
+		save_controls(controls);
+
+	calcEnd();
+}
+
+uint8_t load_rom(char *file_name) 
+{
 	fillScreen(color(0, 0, 0));
 	Debug_Printf(0, 0, false, 0, "Loading ROM");
 	LCD_Refresh();
 
-	priv.rom = read_rom_to_ram(rom_file_name);
+	priv.rom = read_rom_to_ram(file_name);
 
 	if(priv.rom == NULL)
 	{
 		error_print("Error while reading ROM");
-		calcEnd();
-		return;
+		return MENU_QUIT;
 	}
 
 	if(!initEmulator())
 	{
-		calcEnd();
-		return;
+		error_print("Error while reading ROM");
+		return MENU_QUIT;
 	}
 
 	// draw menu and its overlay
 	draw_emulation_menu(0, 0, 4);
 	draw_menu_overlay();
 
-	executeRom();
-
+	// run until rom is closed
+	uint8_t menu_code = executeRom();
+	
 	// save cart rom
 	char cart_ram_file_name[37];
 
@@ -323,11 +343,18 @@ void main()
 	if(rom_config_changed)
 		save_rom_config(gb.direct.frame_skip, gb.direct.interlace, turbo_enabled, turbo_amount, current_palette);
 
-	free(priv.cart_ram);
+  // cleanup
+	if(priv.cart_ram)
+		free(priv.cart_ram);
+
 	free(priv.rom);
 	free(color_palettes);
 
-	calcEnd();
+	priv.cart_ram = NULL;
+	priv.rom = NULL;
+	color_palettes = NULL;
+
+	return menu_code;
 }
 
 uint8_t initEmulator()
@@ -406,7 +433,7 @@ uint8_t initEmulator()
 	return 1;
 }
 
-void executeRom() 
+uint8_t executeRom() 
 {
 	uint32_t key1;
 	uint32_t key2;
@@ -472,8 +499,10 @@ void executeRom()
 
 		if(testKey(key1, key2, KEY_NEGATIVE))
 		{
-			if(emulation_menu())
-				return;
+			uint8_t menu_code = emulation_menu();
+
+			if((menu_code == MENU_LOAD_NEW) || (menu_code == MENU_QUIT))
+				return menu_code;
 		}
 
 		/* 
@@ -622,7 +651,7 @@ uint8_t emulation_menu()
 	bool in_menu = true;
 	bool button_pressed = true;
 
-	uint8_t item_counts[tab_count] = { 5, 1, 1, 3 };
+	uint8_t item_counts[tab_count] = { 5, 1, dirFiles, 3 };
 
 	uint8_t selected_tab = 0;
 	uint8_t selected_item = 0;
@@ -741,12 +770,18 @@ uint8_t emulation_menu()
 					break;
 
 				case 4:
-					return 1;
+					return MENU_QUIT;
 				
 				default:
 					break;
 				}
 				break;
+			case TAB_LOAD_ROM:
+			{
+				current_filename = selected_item;
+
+				return MENU_LOAD_NEW;
+			}
 			case TAB_SETTINGS:
 				switch (selected_item)
 				{
@@ -945,6 +980,36 @@ void draw_emulation_menu(uint8_t selected_tab, uint8_t selected_item, const uint
 
 			strcpy(title_string, " Quit CPBoy                                           ");
 			print_string(title_string, 0, main_y + 114, 0, 0xFFFF, (selected_item == 4) * 0x8410, 1);
+
+			break;
+		}
+	case TAB_LOAD_ROM:
+		{
+			char title_string[200];
+
+			// draw settings title
+			for(uint16_t y = 0; y < 37; y++)
+			{
+				for(uint16_t x = 0; x < (LCD_WIDTH * 2); x++)
+					vram[((main_y + y) * (LCD_WIDTH * 2) + x)] = bottom_bar_selected;
+			}
+
+			char numFiles[40];
+			convert_byte_to_string(dirFiles, numFiles);
+			strcat(numFiles, " detected ROMs (in \\fls0\\roms)");
+
+			print_string(numFiles, 6, main_y + 12, 0, 0x0000, 0x0000, 1);
+
+			// draw interactive menu - todo: make this work with more than the amount of roms that fit on screen
+			for (uint8_t i = 0; i < dirFiles; i++) {
+				strcpy(title_string, " ");
+				strcat(title_string, fileNames[i]);
+				// fill rest of line with spaces if selected for background
+				if (selected_item == i)
+					for (uint8_t j = strlen(fileNames[i]); j < 52; j++)
+						strcat(title_string, " ");
+				print_string(title_string, 0, main_y + 44 + i*14, 0, 0xFFFF, (selected_item == i) * 0x8410, 1);
+			}
 
 			break;
 		}
