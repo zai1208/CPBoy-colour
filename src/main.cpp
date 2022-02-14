@@ -67,6 +67,8 @@
 #define MENU_LOAD_NEW	1
 #define MENU_QUIT			2
 
+#define ROM_CONFIG_SIZE	3
+
 #define RGB555_TO_RGB565(rgb555) ( \
 	0 | \
 	((rgb555 & 0b0111110000000000) <<1) | \
@@ -94,6 +96,7 @@ void error_print(const char *message);
 void gb_error(struct gb_s *gb, const enum gb_error_e gb_err, const uint16_t val);
 void gb_cart_ram_write(struct gb_s *gb, const uint_fast32_t addr, const uint8_t val);
 void get_cart_ram_file_name(char *name_buffer);
+void get_rom_config_file_name(char *name_buffer);
 void lcd_draw_line(struct gb_s *gb, const uint8_t pixels[160], const uint_fast8_t line);
 uint8_t executeRom();
 void findFiles();
@@ -122,6 +125,10 @@ int8_t save_palette(struct palette *palette);
 void delete_palette(struct palette *palette);
 int8_t save_controls(uint32_t (*controls_ptr)[2]);
 void load_controls(uint32_t (*controls_ptr)[2]);
+int8_t save_rom_config(bool frameskip, bool interlace, bool turbo_e, 
+	uint8_t turbo_a, uint8_t current_pal);
+void load_rom_config(bool *frameskip, bool *interlace, bool *turbo_e, 
+	uint8_t *turbo_a, uint8_t *current_pal);
 bool get_game_palette(uint8_t game_checksum, uint16_t (*game_palette)[4]);
 void *memcpy(void *dest, const void *src, size_t count);
 uint8_t load_rom(char *file_name);
@@ -183,6 +190,7 @@ uint8_t current_filename;
 
 bool game_palette_exists;
 bool controls_changed;
+bool rom_config_changed;
 
 int dirFiles = 0;
 
@@ -219,6 +227,7 @@ void main()
 	}
 
 	controls_changed = false;
+	rom_config_changed = false;
 
 	findFiles();
 
@@ -328,7 +337,13 @@ uint8_t load_rom(char *file_name)
 	// When rom is fully executed, save ram and cleanup
 	write_cart_ram_file(cart_ram_file_name, &priv.cart_ram, gb_get_save_size(&gb));
 
-	// cleanup
+	// save user stuff
+	if(controls_changed)
+		save_controls(controls);
+	if(rom_config_changed)
+		save_rom_config(gb.direct.frame_skip, gb.direct.interlace, turbo_enabled, turbo_amount, current_palette);
+
+  // cleanup
 	if(priv.cart_ram)
 		free(priv.cart_ram);
 
@@ -347,9 +362,6 @@ uint8_t initEmulator()
 	// LCD_ClearScreen();
 	Debug_Printf(0, 0, false, 0, "Init");
 	LCD_Refresh();
-
-	// Load user configs
-	load_controls(controls);
 
 	enum gb_init_error_e gb_ret;
 
@@ -394,10 +406,25 @@ uint8_t initEmulator()
 	/* Initialise lcd stuff */
 	gb_init_lcd(&gb, &lcd_draw_line);
 
+	// Load user configs
+	load_controls(controls);
+
+	bool frameskip = false;
+	bool interlace = false;
+
+	load_rom_config(&frameskip, &interlace, &turbo_enabled, &turbo_amount, &current_palette);
+
+	gb.direct.frame_skip = frameskip;
+	gb.direct.interlace = interlace;
+
 	load_palettes();
 
-	// load default palette
-	priv.selected_palette = color_palettes[0].data;
+	// check if loaded palette is out of range
+	if(current_palette >= palette_count)
+		current_palette = 0;
+
+	// load selected palette
+	priv.selected_palette = color_palettes[current_palette].data;
 
 	// LCD_ClearScreen();
 	Debug_Printf(0, 0, false, 0, "Init complete");
@@ -435,6 +462,7 @@ uint8_t executeRom()
 		if(testKey(key1, key2, KEY_KEYBOARD))
 		{
 			gb.direct.frame_skip = !gb.direct.frame_skip;
+			rom_config_changed = true;
 
 			if(gb.direct.frame_skip)
 				error_print("Frameskip on");
@@ -445,6 +473,7 @@ uint8_t executeRom()
 		if(testKey(key1, key2, KEY_MULTIPLY))
 		{
 			turbo_enabled = !turbo_enabled;
+			rom_config_changed = true;
 
 			if(turbo_enabled)
 			{
@@ -460,6 +489,7 @@ uint8_t executeRom()
 		if(testKey(key1, key2, KEY_BACKSPACE))
 		{
 			gb.direct.interlace = !gb.direct.interlace;
+			rom_config_changed = true;
 
 			if(gb.direct.interlace)
 				error_print("Interlace on");
@@ -713,16 +743,19 @@ uint8_t emulation_menu()
 				case 0:
 					// toggle frameskipping
 					gb.direct.frame_skip = !gb.direct.frame_skip;
+					rom_config_changed = true;
 					break;
 					
 				case 1:
 					// edit turbo mode
 					show_turbo_dialog();
+					rom_config_changed = true;
 					break;
 
 				case 2:
 					// toggle interlacing
 					gb.direct.interlace = !gb.direct.interlace;
+					rom_config_changed = true;
 					break;
 
 				case 3:
@@ -733,6 +766,7 @@ uint8_t emulation_menu()
 						current_palette = 0;
 
 					priv.selected_palette = color_palettes[current_palette].data;
+					rom_config_changed = true;
 					break;
 
 				case 4:
@@ -2375,6 +2409,64 @@ void load_controls(uint32_t (*controls_ptr)[2])
 	memcpy(controls_ptr, default_controls, sizeof(default_controls));
 }
 
+int8_t save_rom_config(bool frameskip, bool interlace, bool turbo_e, 
+	uint8_t turbo_a, uint8_t current_pal)
+{
+	// make user directory
+	mkdir("\\fls0\\CPBoy");
+	mkdir("\\fls0\\CPBoy\\user");
+
+	char rom_config_file_name[38];
+
+	get_rom_config_file_name(rom_config_file_name);
+
+	uint8_t buffer[ROM_CONFIG_SIZE] = 
+	{
+		(uint8_t)(((frameskip <<2) & 0x4) | ((interlace <<1) & 0x2) | ((uint8_t)turbo_e & 0x1)),
+		turbo_a,
+		current_pal
+	};
+
+	int fd = open(rom_config_file_name, OPEN_CREATE | OPEN_WRITE);
+
+	if(fd < 0)
+		return -1;
+
+	if(write(fd, buffer, sizeof(buffer)) < 0)
+	{
+		close(fd);
+		return -1;
+	}
+
+	close(fd);
+
+	return 0;
+}
+
+void load_rom_config(bool *frameskip, bool *interlace, bool *turbo_e, 
+	uint8_t *turbo_a, uint8_t *current_pal)
+{
+	uint8_t buffer[ROM_CONFIG_SIZE];
+
+	char rom_config_file_name[38];
+
+	get_rom_config_file_name(rom_config_file_name);
+
+	memset(buffer, 0, sizeof(buffer));
+
+	int fd = open(rom_config_file_name, OPEN_READ);
+
+	read(fd, buffer, sizeof(buffer));
+	close(fd);
+
+	// load contents into correct variables
+	*frameskip = (buffer[0] >>2) & 0x1;
+	*interlace = (buffer[0] >>1) & 0x1;
+	*turbo_e = buffer[0] & 0x1;
+	*turbo_a = buffer[1];	
+	*current_pal = buffer[2];	
+}
+
 bool get_game_palette(uint8_t game_checksum, uint16_t (*game_palette)[4])
 {
 	/* Palettes by deltabeard from the PeanutGB SDL example */
@@ -2682,6 +2774,22 @@ void get_cart_ram_file_name(char *name_buffer)
 
 	strcat(name_buffer, temp);	
 	strcat(name_buffer, ".csav");
+}
+
+/*  
+ * Gets the filename of the current rom config that holds
+ * frameskib, turbomode, palette, etc data
+ */
+void get_rom_config_file_name(char *name_buffer)
+{
+	strcpy(name_buffer, "\\fls0\\CPBoy\\user\\");
+
+	char temp[17];
+
+	gb_get_rom_name(&gb, temp);
+
+	strcat(name_buffer, temp);	
+	strcat(name_buffer, ".cpbc");
 }
 
 /**
