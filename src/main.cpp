@@ -414,6 +414,8 @@ uint8_t initEmulator()
 
 	gb.direct.frame_skip = frameskip;
 	gb.direct.interlace = interlace;
+	
+	rom_config_changed = false;
 
 	load_palettes();
 
