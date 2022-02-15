@@ -69,6 +69,10 @@
 
 #define ROM_CONFIG_SIZE	3
 
+#define SAVESTATE_NAME			0
+#define SAVESTATE_NAME_SIZE	25
+#define SAVESTATE_SIZE	(SAVESTATE_NAME_SIZE)
+
 #define RGB555_TO_RGB565(rgb555) ( \
 	0 | \
 	((rgb555 & 0b0111110000000000) <<1) | \
@@ -175,9 +179,19 @@ struct palette
 	uint16_t data[3][4];
 };
 
+struct savestate
+{
+	/* The name of the savestate */
+	char name[25];
+	
+	/* Full location to savestatefile */
+	char file[200];
+};
+
 uint16_t default_palette[3][4];
 
 struct palette *color_palettes = NULL;
+struct savestate *savestates = NULL;
 
 uint32_t controls[8][2];
 
@@ -187,6 +201,7 @@ char fileNames[64][100];
 uint8_t palette_count;
 uint8_t current_palette;
 uint8_t current_filename;
+uint8_t savestate_count;
 
 bool game_palette_exists;
 bool controls_changed;
@@ -225,6 +240,8 @@ void main()
 		
 		memcpy(default_palette, _default_palette, sizeof(default_palette));
 	}
+
+	savestates = NULL;
 
 	controls_changed = false;
 	rom_config_changed = false;
@@ -418,6 +435,7 @@ uint8_t initEmulator()
 	rom_config_changed = false;
 
 	load_palettes();
+	load_savestates();
 
 	// check if loaded palette is out of range
 	if(current_palette >= palette_count)
@@ -983,6 +1001,50 @@ void draw_emulation_menu(uint8_t selected_tab, uint8_t selected_item, const uint
 
 			break;
 		}
+	case TAB_SAVESTATES:
+	 	{
+			// draw rom title
+			for(uint16_t y = 0; y < 37; y++)
+			{
+				for(uint16_t x = 0; x < (LCD_WIDTH * 2); x++)
+					vram[((main_y + y) * (LCD_WIDTH * 2) + x)] = bottom_bar_selected;
+			}
+
+			char title_string[200] = " Current ROM: ";
+			char rom_name[17];
+
+			print_string("Savestates", 0, main_y + 4, 0, 0x0000, 0x0000, 1);
+
+			// draw rom filename
+			gb_get_rom_name(&gb, rom_name);
+			strcat(title_string, rom_name);
+
+			print_string(title_string, 0, main_y + 20, 0, 0x0000, 0x0000, 1);
+
+			char numFiles[40];
+			convert_byte_to_string(dirFiles, numFiles);
+			strcat(numFiles, " detected ROMs (in \\fls0\\roms)");
+
+			print_string(numFiles, 6, main_y + 12, 0, 0x0000, 0x0000, 1);
+
+			// draw interactive menu
+			for (uint8_t i = 0; i < savestate_count; i++) 
+			{
+				strcpy(title_string, " ");
+				strcat(title_string, savestates[i].name);
+
+				// fill with spaces
+				for(uint8_t l = strlen(title_string); l < 54; l++)
+					strcat(title_string, " ");
+						
+				// draw name
+				print_string(title_string, 0, main_y + 44 + (i * 14), 0, 0xFFFF, (selected_item == i) * 0x8410, 1);
+			}
+
+			// draw new button
+			print_string(" New Savestate                                        ", 0, 
+				main_y + 44 + (savestate_count * 14), 0, 0xFFFF, (selected_item == savestate_count) * 0x8410, 1);
+		}
 	case TAB_LOAD_ROM:
 		{
 			char title_string[200];
@@ -1001,13 +1063,15 @@ void draw_emulation_menu(uint8_t selected_tab, uint8_t selected_item, const uint
 			print_string(numFiles, 6, main_y + 12, 0, 0x0000, 0x0000, 1);
 
 			// draw interactive menu - todo: make this work with more than the amount of roms that fit on screen
-			for (uint8_t i = 0; i < dirFiles; i++) {
+			for (uint8_t i = 0; i < dirFiles; i++) 
+			{
 				strcpy(title_string, " ");
 				strcat(title_string, fileNames[i]);
 				// fill rest of line with spaces if selected for background
 				if (selected_item == i)
 					for (uint8_t j = strlen(fileNames[i]); j < 52; j++)
 						strcat(title_string, " ");
+						
 				print_string(title_string, 0, main_y + 44 + i*14, 0, 0xFFFF, (selected_item == i) * 0x8410, 1);
 			}
 
@@ -2331,6 +2395,95 @@ void load_palettes()
 	}
 
 	findClose(find_handle);
+}
+
+void load_savestates()
+{
+	char rom_name[17];
+	gb_get_rom_name(&gb, rom_name);
+
+	if(savestates != NULL)
+		free(savestates);
+
+	// get all savestates
+	char savestate_path[47] = "\\fls0\\CPBoy\\savestates\\";
+	strcat(savestate_path, rom_name);
+	strcat(savestate_path, "\\*.gbss");
+
+	wchar_t w_savestate_path[sizeof(savestate_path)];
+
+	memset(w_savestate_path, 0, sizeof(w_savestate_path));
+	
+	for(uint8_t i = 0; savestate_path[i] != 0; i++)
+	{
+		wchar_t ch = savestate_path[i];
+		w_savestate_path[i] = ch;
+	}
+
+	wchar_t file_name[100];
+	struct findInfo find_info;
+
+	int find_handle;
+	int ret = findFirst(w_savestate_path, &find_handle, file_name, &find_info);
+
+	// get file count
+	while(ret >= 0) 
+	{
+		savestate_count++;
+
+		//serch next
+		ret = findNext(find_handle, file_name, &find_info);
+	}
+
+	findClose(find_handle);
+	
+	// create big enough array
+	savestates = (savestate *)malloc(savestate_count * sizeof(savestate));
+
+	// populate savestates
+	uint8_t savestate_id = 0;
+
+	ret = findFirst(w_savestate_path, &find_handle, file_name, &find_info);
+
+	while(ret >= 0) 
+	{
+		char savestate_file[200] = "\\fls0\\CPBoy\\savestates\\";
+		char temp[100];
+
+		uint8_t savestate_buffer[SAVESTATE_SIZE];
+
+		uint8_t file_name_size = 0;
+
+		//copy file name
+		for(uint8_t i = 0; file_name[i] != 0; i++) 
+		{
+			wchar_t ch = file_name[i];
+			temp[i] = ch;
+
+			file_name_size++;
+		}
+
+		temp[file_name_size] = 0;
+
+		strcat(savestate_file, temp);
+
+		// load this state
+		int fd = open(savestate_file, OPEN_READ);
+
+		if(fd >= 0)
+		{
+			read(fd, savestate_buffer, SAVESTATE_SIZE);
+			close(fd);
+
+			strcpy(savestates[savestate_id].name, (char *)savestate_buffer[SAVESTATE_NAME]);
+			strcpy(savestates[savestate_id].file, savestate_file);
+		}
+
+		//serch next
+		ret = findNext(find_handle, file_name, &find_info);
+
+		savestate_id++;
+	}
 }
 
 int8_t save_controls(uint32_t (*controls_ptr)[2])
