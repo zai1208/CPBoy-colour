@@ -364,10 +364,12 @@ uint8_t load_rom(char *file_name)
 
 	free(priv.rom);
 	free(color_palettes);
+	free(savestates);
 
 	priv.cart_ram = NULL;
 	priv.rom = NULL;
 	color_palettes = NULL;
+	savestates = NULL;
 
 	return menu_code;
 }
