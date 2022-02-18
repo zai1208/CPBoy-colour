@@ -755,13 +755,7 @@ uint8_t emulation_menu()
 	{
 		uint8_t item_counts[tab_count] = { 5, savestate_count + 1, dirFiles, 3 };
 
-		Debug_Printf(0, 0, 0, 0, "Drawing");
-		LCD_Refresh();
-
 		draw_emulation_menu(selected_tab, selected_item, tab_count);
-		LCD_Refresh();
-		
-		Debug_Printf(0, 0, 0, 0, "Drawn");
 		LCD_Refresh();
 
 		while(button_pressed) 
@@ -881,12 +875,7 @@ uint8_t emulation_menu()
 				{
 					// New Savestate
 					create_savestate(last_frame);
-					Debug_Printf(0, 0, 0, 0, "Loading");
-					LCD_Refresh();
 					load_savestates();
-					
-					Debug_Printf(0, 0, 0, 0, "Loaded");
-					LCD_Refresh();
 				}
 				else
 				{
@@ -1139,38 +1128,21 @@ void draw_emulation_menu(uint8_t selected_tab, uint8_t selected_item, const uint
 			strcat(numFiles, " detected ROMs (in \\fls0\\roms)");
 
 			print_string(numFiles, 6, main_y + 12, 0, 0x0000, 0x0000, 1);
-					
-			Debug_Printf(0, 5, 0, 0, "%d", savestate_count);
-			LCD_Refresh();
 
 			// draw interactive menu
 			for (uint8_t i = 0; i < savestate_count; i++) 
 			{
-				Debug_Printf(0, 0, 0, 0, "Creating title");
-				LCD_Refresh();
 
 				strcpy(title_string, " ");
 				strcat(title_string, savestates[i].name);
 
-				Debug_Printf(0, 0, 0, 0, savestates[i].name);
-				LCD_Refresh();
-
-				Debug_Printf(0, 1, 0, 0, title_string);
-				LCD_Refresh();
-
 				// fill with spaces
 				for(uint8_t l = strlen(title_string); l < 54; l++)
 					strcat(title_string, " ");
-					
-				Debug_Printf(0, 0, 0, 0, "Draw name");
-				LCD_Refresh();
 						
 				// draw name
 				print_string(title_string, 0, main_y + 44 + (i * 14), 0, 0xFFFF, (selected_item == i) * 0x8410, 1);
 			}
-
-			Debug_Printf(0, 0, 0, 0, "Draw new");
-			LCD_Refresh();
 
 			// draw new button
 			print_string(" New Savestate                                        ", 0, 
@@ -1238,9 +1210,6 @@ void draw_emulation_menu(uint8_t selected_tab, uint8_t selected_item, const uint
 	default:
 		break;
 	}
-
-	Debug_Printf(0, 0, 0, 0, "Return");
-	LCD_Refresh();
 }
 
 void show_palette_dialog()
@@ -1364,19 +1333,11 @@ void show_palette_dialog()
 				{
 					uint8_t current_number = convert_string_to_byte(color_palettes[i + custom_offset].name + sizeof("Custom ") - 1);
 
-					// Debug_Printf(0, 8, 0, 0, color_palettes[i + custom_offset].name + sizeof("Custom ") - 1);
-					// Debug_Printf(0, 9, 0, 0, color_palettes[i + custom_offset].name);
-
 					if(lowest == current_number)
 					{
 						lowest++;
 						i = 255; 	// restart for loop
 					}
-
-					// Debug_Printf(0, 10, 0, 0, "Current: %d; Lowest: %d; i: %d", current_number, lowest, i);
-
-					// for (uint8_t i = 0; i < 60; i++)
-					// 	LCD_Refresh();
 				}
 
 				convert_byte_to_string(lowest, number);
@@ -2356,17 +2317,10 @@ uint8_t convert_string_to_byte(char *string)
 
 void create_palette(char *palette_name)
 {
-	// Debug_Printf(0, 4, 0, 0, "Creating palette");
-	// for (uint8_t i = 0; i < 60; i++)
-	// 	LCD_Refresh();
-
 	struct palette new_palette;
 	strcpy(new_palette.name, palette_name);
 	memcpy(new_palette.data, default_palette, sizeof(default_palette));
 
-	// Debug_Printf(0, 0, 0, 0, "Saving palette");
-	// for (uint8_t i = 0; i < 60; i++)
-	// 	LCD_Refresh();
 	save_palette(&new_palette);
 }
 
@@ -2381,47 +2335,24 @@ void delete_palette(struct palette *palette)
 
 int8_t save_palette(struct palette *palette)
 {
-	// Debug_Printf(0, 1, 0, 0, "Started saving");
-	// for (uint8_t i = 0; i < 60; i++)
-	// 	LCD_Refresh();
-
 	// make necessary directories
 	mkdir("\\fls0\\CPBoy");
 	mkdir("\\fls0\\CPBoy\\palettes");
 
-	// Debug_Printf(0, 2, 0, 0, "Made directories");
-	// for (uint8_t i = 0; i < 60; i++)
-	// 	LCD_Refresh();
-
 	char palette_path[200] = "\\fls0\\CPBoy\\palettes\\";
 	strcat(palette_path, palette->name);
 	strcat(palette_path, ".gbcp");
-
-	// Debug_Printf(0, 3, 0, 0, palette_path);
-	// for (uint8_t i = 0; i < 60; i++)
-	// 	LCD_Refresh();
 	
 	int palette_file = open(palette_path, OPEN_CREATE | OPEN_WRITE);
-
-	// Debug_Printf(0, 4, 0, 0, "Opened file");
-	// for (uint8_t i = 0; i < 60; i++)
-	// 	LCD_Refresh();
 	
 	if(palette_file < 0)
 		return -1;
-
-	// Debug_Printf(0, 5, 0, 0, "Open success");
-	// for (uint8_t i = 0; i < 60; i++)
-	// 	LCD_Refresh();
 	
 	if(write(palette_file, palette, sizeof(struct palette)) < 0)
 	{
 		close(palette_file);
 		return -1;
 	}
-	// Debug_Printf(0, 6, 0, 0, "Close file");
-	// for (uint8_t i = 0; i < 60; i++)
-	// 	LCD_Refresh();
 
 	close(palette_file);
 
