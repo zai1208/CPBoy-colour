@@ -69,9 +69,15 @@
 
 #define ROM_CONFIG_SIZE	3
 
-#define SAVESTATE_NAME			0
-#define SAVESTATE_NAME_SIZE	25
-#define SAVESTATE_SIZE	(SAVESTATE_NAME_SIZE)
+#define SAVESTATE_NAME						0
+#define SAVESTATE_NAME_SIZE				25
+#define SAVESTATE_PREVIEW					SAVESTATE_NAME_SIZE
+#define SAVESTATE_PREVIEW_SIZE		(LCD_WIDTH * LCD_HEIGHT * 2)
+#define SAVESTATE_GB_STATE				(SAVESTATE_NAME_SIZE + SAVESTATE_PREVIEW_SIZE)
+#define SAVESTATE_GB_STATE_SIZE		sizeof(struct gb_state)
+#define SAVESTATE_CART_RAM				(SAVESTATE_NAME_SIZE + SAVESTATE_PREVIEW_SIZE + SAVESTATE_GB_STATE_SIZE)
+#define SAVESTATE_CART_RAM_SIZE		gb_get_save_size(&gb)
+#define SAVESTATE_SIZE						(SAVESTATE_NAME_SIZE + SAVESTATE_PREVIEW_SIZE + SAVESTATE_GB_STATE_SIZE + SAVESTATE_CART_RAM_SIZE)
 
 #define RGB555_TO_RGB565(rgb555) ( \
 	0 | \
@@ -129,6 +135,8 @@ int8_t save_palette(struct palette *palette);
 void delete_palette(struct palette *palette);
 int8_t save_controls(uint32_t (*controls_ptr)[2]);
 void load_controls(uint32_t (*controls_ptr)[2]);
+void load_savestates();
+void create_savestate(uint16_t (*preview_frame)[LCD_WIDTH]);
 int8_t save_rom_config(bool frameskip, bool interlace, bool turbo_e, 
 	uint8_t turbo_a, uint8_t current_pal);
 void load_rom_config(bool *frameskip, bool *interlace, bool *turbo_e, 
@@ -161,6 +169,61 @@ struct priv_t
 
 	/* Pointer to colour palette for each BG, OBJ0, and OBJ1. */
 	uint16_t (*selected_palette)[4];
+};
+
+struct gb_state
+{
+	uint8_t gb_halt;
+	uint8_t gb_ime;
+	uint8_t gb_bios_enable;
+	uint8_t lcd_mode;
+
+	uint16_t selected_rom_bank;
+	uint8_t cart_ram_bank;
+	uint8_t enable_cart_ram;
+	uint8_t cart_mode_select;
+
+	uint8_t a;
+	uint8_t f;
+	uint16_t bc;
+	uint16_t de;
+	uint16_t hl;
+	uint16_t sp;
+	uint16_t pc;
+
+	uint_fast16_t lcd_count;
+	uint_fast16_t div_count;
+	uint_fast16_t tima_count;
+	uint_fast16_t serial_count;
+
+	uint8_t TIMA;
+	uint8_t TMA;
+	uint8_t TAC;
+	uint8_t DIV;
+	
+	uint8_t IF;
+	
+	uint8_t LCDC;
+	uint8_t SCY;
+	uint8_t SCX;
+	uint8_t LYC;
+
+	uint8_t SC;
+	uint8_t STAT;
+	uint8_t LY;
+	
+	uint8_t WY;
+	uint8_t WX;
+	uint8_t IE;
+	
+	uint8_t joypad = 0xFF;
+	uint8_t P1 = 0xCF;
+
+	uint8_t wram[WRAM_SIZE];
+	uint8_t vram[VRAM_SIZE];
+	uint8_t hram[HRAM_SIZE];
+	uint8_t oam[OAM_SIZE];
+	uint8_t audio_mem[AUDIO_MEM_SIZE];
 };
 
 struct gb_s gb;
@@ -663,6 +726,17 @@ uint8_t *read_rom_to_ram(const char *file_name)
 
 uint8_t emulation_menu()
 {
+	uint16_t (*last_frame)[LCD_WIDTH] = (uint16_t (*)[LCD_WIDTH])malloc(LCD_WIDTH * LCD_HEIGHT * 2);
+
+	// backup lcd
+	for(uint16_t y = 0; y < LCD_HEIGHT; y++)
+	{
+		for(uint16_t x = 0; x < LCD_WIDTH; x++)
+		{
+			last_frame[y][x] = vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2)];
+		}
+	}
+
 	// show emulation paused text
 	draw_pause_overlay();
 
@@ -670,8 +744,6 @@ uint8_t emulation_menu()
 
 	bool in_menu = true;
 	bool button_pressed = true;
-
-	uint8_t item_counts[tab_count] = { 5, 1, dirFiles, 3 };
 
 	uint8_t selected_tab = 0;
 	uint8_t selected_item = 0;
@@ -681,7 +753,15 @@ uint8_t emulation_menu()
 
 	while(in_menu)
 	{
+		uint8_t item_counts[tab_count] = { 5, savestate_count + 1, dirFiles, 3 };
+
+		Debug_Printf(0, 0, 0, 0, "Drawing");
+		LCD_Refresh();
+
 		draw_emulation_menu(selected_tab, selected_item, tab_count);
+		LCD_Refresh();
+		
+		Debug_Printf(0, 0, 0, 0, "Drawn");
 		LCD_Refresh();
 
 		while(button_pressed) 
@@ -796,6 +876,23 @@ uint8_t emulation_menu()
 					break;
 				}
 				break;
+			case TAB_SAVESTATES:
+				if(selected_item == savestate_count)
+				{
+					// New Savestate
+					create_savestate(last_frame);
+					Debug_Printf(0, 0, 0, 0, "Loading");
+					LCD_Refresh();
+					load_savestates();
+					
+					Debug_Printf(0, 0, 0, 0, "Loaded");
+					LCD_Refresh();
+				}
+				else
+				{
+					// Apply Savestate
+				}
+				break;
 			case TAB_LOAD_ROM:
 			{
 				current_filename = selected_item;
@@ -827,6 +924,20 @@ uint8_t emulation_menu()
 
 	// draw menu overlay
 	draw_menu_overlay();
+
+	// restore lcd
+	for(uint16_t y = 0; y < LCD_HEIGHT; y++)
+	{
+		for(uint16_t x = 0; x < LCD_WIDTH; x++)
+		{
+			vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2)] = last_frame[y][x];
+			vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2) + 1] = last_frame[y][x];
+			vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2)] = last_frame[y][x];
+			vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2) + 1] = last_frame[y][x];
+		}
+	}
+
+	free(last_frame);
 
 	return 0;
 }
@@ -1028,24 +1139,44 @@ void draw_emulation_menu(uint8_t selected_tab, uint8_t selected_item, const uint
 			strcat(numFiles, " detected ROMs (in \\fls0\\roms)");
 
 			print_string(numFiles, 6, main_y + 12, 0, 0x0000, 0x0000, 1);
+					
+			Debug_Printf(0, 5, 0, 0, "%d", savestate_count);
+			LCD_Refresh();
 
 			// draw interactive menu
 			for (uint8_t i = 0; i < savestate_count; i++) 
 			{
+				Debug_Printf(0, 0, 0, 0, "Creating title");
+				LCD_Refresh();
+
 				strcpy(title_string, " ");
 				strcat(title_string, savestates[i].name);
+
+				Debug_Printf(0, 0, 0, 0, savestates[i].name);
+				LCD_Refresh();
+
+				Debug_Printf(0, 1, 0, 0, title_string);
+				LCD_Refresh();
 
 				// fill with spaces
 				for(uint8_t l = strlen(title_string); l < 54; l++)
 					strcat(title_string, " ");
+					
+				Debug_Printf(0, 0, 0, 0, "Draw name");
+				LCD_Refresh();
 						
 				// draw name
 				print_string(title_string, 0, main_y + 44 + (i * 14), 0, 0xFFFF, (selected_item == i) * 0x8410, 1);
 			}
 
+			Debug_Printf(0, 0, 0, 0, "Draw new");
+			LCD_Refresh();
+
 			// draw new button
 			print_string(" New Savestate                                        ", 0, 
 				main_y + 44 + (savestate_count * 14), 0, 0xFFFF, (selected_item == savestate_count) * 0x8410, 1);
+			
+			break;
 		}
 	case TAB_LOAD_ROM:
 		{
@@ -1107,6 +1238,9 @@ void draw_emulation_menu(uint8_t selected_tab, uint8_t selected_item, const uint
 	default:
 		break;
 	}
+
+	Debug_Printf(0, 0, 0, 0, "Return");
+	LCD_Refresh();
 }
 
 void show_palette_dialog()
@@ -2407,8 +2541,10 @@ void load_savestates()
 	if(savestates != NULL)
 		free(savestates);
 
+	savestate_count = 0;
+
 	// get all savestates
-	char savestate_path[47] = "\\fls0\\CPBoy\\savestates\\";
+	char savestate_path[48] = "\\fls0\\CPBoy\\savestates\\";
 	strcat(savestate_path, rom_name);
 	strcat(savestate_path, "\\*.gbss");
 
@@ -2452,7 +2588,7 @@ void load_savestates()
 		char savestate_file[200] = "\\fls0\\CPBoy\\savestates\\";
 		char temp[100];
 
-		uint8_t savestate_buffer[SAVESTATE_SIZE];
+		uint8_t savestate_name_buffer[SAVESTATE_NAME_SIZE];
 
 		uint8_t file_name_size = 0;
 
@@ -2467,6 +2603,8 @@ void load_savestates()
 
 		temp[file_name_size] = 0;
 
+		strcat(savestate_file, rom_name);
+		strcat(savestate_file, "\\");
 		strcat(savestate_file, temp);
 
 		// load this state
@@ -2474,10 +2612,10 @@ void load_savestates()
 
 		if(fd >= 0)
 		{
-			read(fd, savestate_buffer, SAVESTATE_SIZE);
+			read(fd, savestate_name_buffer, SAVESTATE_NAME_SIZE);
 			close(fd);
 
-			strcpy(savestates[savestate_id].name, (char *)savestate_buffer[SAVESTATE_NAME]);
+			strcpy(savestates[savestate_id].name, (char *)&savestate_name_buffer[SAVESTATE_NAME]);
 			strcpy(savestates[savestate_id].file, savestate_file);
 		}
 
@@ -2486,6 +2624,130 @@ void load_savestates()
 
 		savestate_id++;
 	}
+	
+	findClose(find_handle);
+}
+
+void create_savestate(uint16_t (*preview_frame)[LCD_WIDTH])
+{
+	char savestate_name[100] = "State ";
+	char number[4];
+
+	uint8_t lowest = 0;
+
+	// get current lowest savestate number
+	for(uint8_t i = 0; i < savestate_count; i++)
+	{
+		uint8_t current_number = convert_string_to_byte(savestates[i].name + sizeof("State ") - 1);
+
+		if(lowest == current_number)
+		{
+			lowest++;
+			i = 255; 	// restart for loop
+		}
+	}
+
+	convert_byte_to_string(lowest, number);
+	strcat(savestate_name, number);
+
+	// create actual savestate file
+	uint8_t *savestate_buffer = (uint8_t *)malloc(SAVESTATE_SIZE);
+	memset(savestate_buffer, 0, sizeof(savestate_buffer));
+
+	// copy savestate name
+	strcpy((char *)savestate_buffer, savestate_name);
+
+	// copy savestate preview
+	memcpy(&savestate_buffer[SAVESTATE_PREVIEW], preview_frame, SAVESTATE_PREVIEW_SIZE);
+
+	// copy gb stuff
+	struct gb_state gb_state;
+
+	gb_state.gb_halt = gb.gb_halt;
+	gb_state.gb_ime = gb.gb_ime;
+	gb_state.gb_bios_enable = gb.gb_bios_enable;
+
+	gb_state.lcd_mode = gb.lcd_mode;
+	
+	gb_state.selected_rom_bank = gb.selected_rom_bank;
+	gb_state.cart_ram_bank = gb.cart_ram_bank;
+	gb_state.enable_cart_ram = gb.enable_cart_ram;
+	gb_state.cart_mode_select = gb.cart_mode_select;
+	
+	gb_state.a = gb.cpu_reg.a;
+	gb_state.f = gb.cpu_reg.f;
+	gb_state.bc = gb.cpu_reg.bc;
+	gb_state.de = gb.cpu_reg.de;
+	gb_state.hl = gb.cpu_reg.hl;
+	gb_state.sp = gb.cpu_reg.sp;
+	gb_state.pc = gb.cpu_reg.pc;
+	
+	gb_state.lcd_count = gb.counter.lcd_count;
+	gb_state.div_count = gb.counter.div_count;
+	gb_state.tima_count = gb.counter.tima_count;
+	gb_state.serial_count = gb.counter.serial_count;
+	
+	gb_state.TIMA = gb.gb_reg.TIMA;
+	gb_state.TMA = gb.gb_reg.TMA;
+	gb_state.TAC = gb.gb_reg.TAC;
+	gb_state.DIV = gb.gb_reg.DIV;
+	
+	gb_state.IF = gb.gb_reg.IF;
+	
+	gb_state.LCDC = gb.gb_reg.LCDC;
+	gb_state.SCY = gb.gb_reg.SCY;
+	gb_state.SCX = gb.gb_reg.SCX;
+	gb_state.LYC = gb.gb_reg.LYC;
+	
+	gb_state.SC = gb.gb_reg.SC;
+	gb_state.STAT = gb.gb_reg.STAT;
+	gb_state.LY = gb.gb_reg.LY;
+	
+	gb_state.WY = gb.gb_reg.WY;
+	gb_state.WX = gb.gb_reg.WX;
+	gb_state.IE = gb.gb_reg.IE;
+	
+	gb_state.joypad = gb.direct.joypad;
+	gb_state.P1 = gb.gb_reg.P1;
+
+	memcpy(gb_state.wram, gb.wram, sizeof(gb.wram));
+	memcpy(gb_state.vram, gb.vram, sizeof(gb.vram));
+	memcpy(gb_state.hram, gb.hram, sizeof(gb.hram));
+	memcpy(gb_state.oam, gb.oam, sizeof(gb.oam));
+	memcpy(gb_state.audio_mem, gb.audio_mem, sizeof(gb.audio_mem));
+
+	// copy gb_state to final buffer
+	memcpy(&savestate_buffer[SAVESTATE_GB_STATE], &gb_state, SAVESTATE_GB_STATE_SIZE);
+
+	// save cart ram
+	if(SAVESTATE_CART_RAM_SIZE > 0)
+		memcpy(&savestate_buffer[SAVESTATE_CART_RAM], priv.cart_ram, SAVESTATE_CART_RAM_SIZE);
+
+	// write buffer to a file
+	char rom_name[17];
+	char savestate_path[146] = "\\fls0\\CPBoy\\savestates\\";
+
+	gb_get_rom_name(&gb, rom_name);
+	strcat(savestate_path, rom_name);
+
+	// make dirs
+	mkdir("\\fls0\\CPBoy");
+	mkdir("\\fls0\\CPBoy\\savestates");
+
+	strcat(savestate_path, "\\");
+	strcat(savestate_path, savestate_name);
+	strcat(savestate_path, ".gbss");
+
+	// actually write the file
+	int fd = open(savestate_path, OPEN_CREATE | OPEN_WRITE);
+
+	if(fd >= 0)
+	{
+		write(fd, savestate_buffer, SAVESTATE_SIZE);
+		close(fd);
+	}
+
+	free(savestate_buffer);
 }
 
 int8_t save_controls(uint32_t (*controls_ptr)[2])
