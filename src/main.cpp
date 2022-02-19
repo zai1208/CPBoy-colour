@@ -975,6 +975,7 @@ uint8_t emulation_menu()
 					// New Savestate
 					create_savestate(last_frame);
 					load_savestates();
+					load_savestate_preview(&savestates[selected_item]);
 				}
 				else
 				{
