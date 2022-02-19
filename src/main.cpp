@@ -289,9 +289,6 @@ void main()
 	*/
 	calcInit(); //backup screen and init some variables
 
-	// make save directory
-	mkdir("\\fls0\\gb-saves");
-
 	// init palette stuff
 	{
 		color_palettes = NULL;
@@ -2530,8 +2527,13 @@ void delete_palette(struct palette *palette)
 int8_t save_palette(struct palette *palette)
 {
 	// make necessary directories
-	mkdir("\\fls0\\CPBoy");
-	mkdir("\\fls0\\CPBoy\\palettes");
+	struct stat dstat;
+
+	if(stat("\\fls0\\CPBoy", &dstat) != 0)
+		mkdir("\\fls0\\CPBoy");
+	
+	if(stat("\\fls0\\CPBoy}\\palettes", &dstat) != 0)
+		mkdir("\\fls0\\CPBoy\\palettes");
 
 	char palette_path[200] = "\\fls0\\CPBoy\\palettes\\";
 	strcat(palette_path, palette->name);
@@ -2917,8 +2919,13 @@ void delete_savestate(struct savestate *savestate)
 int8_t save_controls(uint32_t (*controls_ptr)[2])
 {
 	// make user directory
-	mkdir("\\fls0\\CPBoy");
-	mkdir("\\fls0\\CPBoy\\user");
+	struct stat dstat;
+
+	if(stat("\\fls0\\CPBoy", &dstat) != 0)
+		mkdir("\\fls0\\CPBoy");
+
+	if(stat("\\fls0\\CPBoy\\user", &dstat) != 0)
+		mkdir("\\fls0\\CPBoy\\user");
 
 	// create save file
 	int f = open("\\fls0\\CPBoy\\user\\controls.cpbc", OPEN_WRITE | OPEN_CREATE);
@@ -2994,8 +3001,13 @@ int8_t save_rom_config(bool frameskip, bool interlace, bool turbo_e,
 	uint8_t turbo_a, uint8_t current_pal)
 {
 	// make user directory
-	mkdir("\\fls0\\CPBoy");
-	mkdir("\\fls0\\CPBoy\\user");
+	struct stat dstat;
+
+	if(stat("\\fls0\\CPBoy", &dstat) != 0)
+		mkdir("\\fls0\\CPBoy");
+
+	if(stat("\\fls0\\CPBoy\\user", &dstat) != 0)
+		mkdir("\\fls0\\CPBoy\\user");
 
 	char rom_config_file_name[38];
 
@@ -3324,6 +3336,12 @@ uint8_t read_cart_ram_file(const char *save_file_name, uint8_t **dest,
 uint8_t write_cart_ram_file(const char *save_file_name, uint8_t **dest,
 			const size_t len)
 {
+	// make save directory
+	struct stat dstat;
+
+	if(stat("\\fls0\\gb-saves", &dstat) != 0)
+		mkdir("\\fls0\\gb-saves");
+
 	int f;
 
 	if(len == 0 || !*dest)
