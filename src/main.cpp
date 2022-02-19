@@ -1266,19 +1266,13 @@ void draw_emulation_menu(uint8_t selected_tab, uint8_t selected_item, const uint
 			char title_string[200] = " Current ROM: ";
 			char rom_name[17];
 
-			print_string("Savestates", 0, main_y + 4, 0, 0x0000, 0x0000, 1);
+			print_string(" Savestates", 0, main_y + 4, 0, 0x0000, 0x0000, 1);
 
 			// draw rom filename
 			gb_get_rom_name(&gb, rom_name);
 			strcat(title_string, rom_name);
 
 			print_string(title_string, 0, main_y + 20, 0, 0x0000, 0x0000, 1);
-
-			char numFiles[40];
-			convert_byte_to_string(dirFiles, numFiles);
-			strcat(numFiles, " detected ROMs (in \\fls0\\roms)");
-
-			print_string(numFiles, 6, main_y + 12, 0, 0x0000, 0x0000, 1);
 
 			// draw interactive menu
 			for (uint8_t i = 0; i < savestate_count; i++) 
