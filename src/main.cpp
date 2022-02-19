@@ -909,6 +909,24 @@ uint8_t emulation_menu()
 				break;
 			}
 		}
+	
+		if(testKey(key1, key2, KEY_CLEAR))
+		{
+			switch (selected_tab)
+			{
+			case TAB_SAVESTATES:
+				// stop if selected item is the "new savestate" btn
+				if(selected_item == savestate_count)
+					break;
+
+				delete_savestate(&savestates[selected_item]);
+				load_savestates();
+				break;
+			
+			default:
+				break;
+			}
+		}
 	}
 
 	// draw menu overlay
@@ -2679,6 +2697,11 @@ void create_savestate(uint16_t (*preview_frame)[LCD_WIDTH])
 	}
 
 	free(savestate_buffer);
+}
+
+void delete_savestate(struct savestate *savestate)
+{
+	remove(savestate->file);
 }
 
 int8_t save_controls(uint32_t (*controls_ptr)[2])
