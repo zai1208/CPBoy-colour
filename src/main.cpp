@@ -70,7 +70,7 @@
 #define ROM_CONFIG_SIZE	3
 
 #define SAVESTATE_NAME						0
-#define SAVESTATE_NAME_SIZE				25
+#define SAVESTATE_NAME_SIZE				28
 #define SAVESTATE_PREVIEW					SAVESTATE_NAME_SIZE
 #define SAVESTATE_PREVIEW_SIZE		(LCD_WIDTH * LCD_HEIGHT * 2)
 #define SAVESTATE_GB_STATE				(SAVESTATE_NAME_SIZE + SAVESTATE_PREVIEW_SIZE)
@@ -139,6 +139,7 @@ void load_savestate_preview(struct savestate *savestate);
 void load_savestates();
 void create_savestate(uint16_t (*preview_frame)[LCD_WIDTH]);
 void delete_savestate(struct savestate *savestate);
+void apply_savestate(struct savestate *savestate, uint16_t (*last_frame)[LCD_WIDTH]);
 int8_t save_rom_config(bool frameskip, bool interlace, bool turbo_e, 
 	uint8_t turbo_a, uint8_t current_pal);
 void load_rom_config(bool *frameskip, bool *interlace, bool *turbo_e, 
@@ -773,8 +774,6 @@ uint8_t emulation_menu()
 		// handle controls
 		if(testKey(key1, key2, KEY_NEGATIVE))
 		{
-			while(Input_IsAnyKeyDown()) { }
-
 			in_menu = false;
 
 			if(current_preview != NULL)
@@ -979,14 +978,10 @@ uint8_t emulation_menu()
 				}
 				else
 				{
-					// Apply Savestate
-					
+					// Apply Savestate (current_preview already gets freed in the function)
+					apply_savestate(&savestates[selected_item], last_frame);
 
-					if(current_preview != NULL)
-					{
-						free(current_preview);
-						current_preview = NULL;
-					}
+					in_menu = false;
 				}
 				break;
 			case TAB_LOAD_ROM:
@@ -1078,6 +1073,9 @@ uint8_t emulation_menu()
 	}
 
 	free(last_frame);
+
+	// wait for key release then exit menu
+	while(Input_IsAnyKeyDown()) { }
 
 	return 0;
 }
@@ -2809,63 +2807,60 @@ void create_savestate(uint16_t (*preview_frame)[LCD_WIDTH])
 	memcpy(&savestate_buffer[SAVESTATE_PREVIEW], preview_frame, SAVESTATE_PREVIEW_SIZE);
 
 	// copy gb stuff
-	struct gb_state gb_state;
+	struct gb_state *gb_state = (struct gb_state *)&savestate_buffer[SAVESTATE_GB_STATE];
 
-	gb_state.gb_halt = gb.gb_halt;
-	gb_state.gb_ime = gb.gb_ime;
-	gb_state.gb_bios_enable = gb.gb_bios_enable;
+	gb_state->gb_halt = gb.gb_halt;
+	gb_state->gb_ime = gb.gb_ime;
+	gb_state->gb_bios_enable = gb.gb_bios_enable;
 
-	gb_state.lcd_mode = gb.lcd_mode;
+	gb_state->lcd_mode = gb.lcd_mode;
 	
-	gb_state.selected_rom_bank = gb.selected_rom_bank;
-	gb_state.cart_ram_bank = gb.cart_ram_bank;
-	gb_state.enable_cart_ram = gb.enable_cart_ram;
-	gb_state.cart_mode_select = gb.cart_mode_select;
+	gb_state->selected_rom_bank = gb.selected_rom_bank;
+	gb_state->cart_ram_bank = gb.cart_ram_bank;
+	gb_state->enable_cart_ram = gb.enable_cart_ram;
+	gb_state->cart_mode_select = gb.cart_mode_select;
 	
-	gb_state.a = gb.cpu_reg.a;
-	gb_state.f = gb.cpu_reg.f;
-	gb_state.bc = gb.cpu_reg.bc;
-	gb_state.de = gb.cpu_reg.de;
-	gb_state.hl = gb.cpu_reg.hl;
-	gb_state.sp = gb.cpu_reg.sp;
-	gb_state.pc = gb.cpu_reg.pc;
+	gb_state->a = gb.cpu_reg.a;
+	gb_state->f = gb.cpu_reg.f;
+	gb_state->bc = gb.cpu_reg.bc;
+	gb_state->de = gb.cpu_reg.de;
+	gb_state->hl = gb.cpu_reg.hl;
+	gb_state->sp = gb.cpu_reg.sp;
+	gb_state->pc = gb.cpu_reg.pc;
 	
-	gb_state.lcd_count = gb.counter.lcd_count;
-	gb_state.div_count = gb.counter.div_count;
-	gb_state.tima_count = gb.counter.tima_count;
-	gb_state.serial_count = gb.counter.serial_count;
+	gb_state->lcd_count = gb.counter.lcd_count;
+	gb_state->div_count = gb.counter.div_count;
+	gb_state->tima_count = gb.counter.tima_count;
+	gb_state->serial_count = gb.counter.serial_count;
 	
-	gb_state.TIMA = gb.gb_reg.TIMA;
-	gb_state.TMA = gb.gb_reg.TMA;
-	gb_state.TAC = gb.gb_reg.TAC;
-	gb_state.DIV = gb.gb_reg.DIV;
+	gb_state->TIMA = gb.gb_reg.TIMA;
+	gb_state->TMA = gb.gb_reg.TMA;
+	gb_state->TAC = gb.gb_reg.TAC;
+	gb_state->DIV = gb.gb_reg.DIV;
 	
-	gb_state.IF = gb.gb_reg.IF;
+	gb_state->IF = gb.gb_reg.IF;
 	
-	gb_state.LCDC = gb.gb_reg.LCDC;
-	gb_state.SCY = gb.gb_reg.SCY;
-	gb_state.SCX = gb.gb_reg.SCX;
-	gb_state.LYC = gb.gb_reg.LYC;
+	gb_state->LCDC = gb.gb_reg.LCDC;
+	gb_state->SCY = gb.gb_reg.SCY;
+	gb_state->SCX = gb.gb_reg.SCX;
+	gb_state->LYC = gb.gb_reg.LYC;
 	
-	gb_state.SC = gb.gb_reg.SC;
-	gb_state.STAT = gb.gb_reg.STAT;
-	gb_state.LY = gb.gb_reg.LY;
+	gb_state->SC = gb.gb_reg.SC;
+	gb_state->STAT = gb.gb_reg.STAT;
+	gb_state->LY = gb.gb_reg.LY;
 	
-	gb_state.WY = gb.gb_reg.WY;
-	gb_state.WX = gb.gb_reg.WX;
-	gb_state.IE = gb.gb_reg.IE;
+	gb_state->WY = gb.gb_reg.WY;
+	gb_state->WX = gb.gb_reg.WX;
+	gb_state->IE = gb.gb_reg.IE;
 	
-	gb_state.joypad = gb.direct.joypad;
-	gb_state.P1 = gb.gb_reg.P1;
+	gb_state->joypad = gb.direct.joypad;
+	gb_state->P1 = gb.gb_reg.P1;
 
-	memcpy(gb_state.wram, gb.wram, sizeof(gb.wram));
-	memcpy(gb_state.vram, gb.vram, sizeof(gb.vram));
-	memcpy(gb_state.hram, gb.hram, sizeof(gb.hram));
-	memcpy(gb_state.oam, gb.oam, sizeof(gb.oam));
-	memcpy(gb_state.audio_mem, gb.audio_mem, sizeof(gb.audio_mem));
-
-	// copy gb_state to final buffer
-	memcpy(&savestate_buffer[SAVESTATE_GB_STATE], &gb_state, SAVESTATE_GB_STATE_SIZE);
+	memcpy(gb_state->wram, gb.wram, sizeof(gb.wram));
+	memcpy(gb_state->vram, gb.vram, sizeof(gb.vram));
+	memcpy(gb_state->hram, gb.hram, sizeof(gb.hram));
+	memcpy(gb_state->oam, gb.oam, sizeof(gb.oam));
+	memcpy(gb_state->audio_mem, gb.audio_mem, sizeof(gb.audio_mem));
 
 	// save cart ram
 	if(SAVESTATE_CART_RAM_SIZE > 0)
@@ -2909,6 +2904,89 @@ void create_savestate(uint16_t (*preview_frame)[LCD_WIDTH])
 void delete_savestate(struct savestate *savestate)
 {
 	remove(savestate->file);
+}
+
+void apply_savestate(struct savestate *savestate, uint16_t (*last_frame)[LCD_WIDTH])
+{
+	int fd = open(savestate->file, OPEN_READ);
+
+	if(fd < 0)
+		return;
+
+	uint8_t *savestate_buffer = (uint8_t *)malloc(SAVESTATE_SIZE);
+	struct gb_state *gb_state = (struct gb_state *)&savestate_buffer[SAVESTATE_GB_STATE];
+
+	read(fd, savestate_buffer, SAVESTATE_SIZE);
+	close(fd);
+
+	// apply state
+	gb.gb_halt = gb_state->gb_halt;
+	gb.gb_ime = gb_state->gb_ime;
+	gb.gb_bios_enable = gb_state->gb_bios_enable;
+	gb.lcd_mode = gb_state->lcd_mode;
+
+	gb.selected_rom_bank = gb_state->selected_rom_bank;
+	gb.cart_ram_bank = gb_state->cart_ram_bank;
+	gb.enable_cart_ram = gb_state->enable_cart_ram;
+	gb.cart_mode_select = gb_state->cart_mode_select;
+	
+	gb.cpu_reg.a =  gb_state->a;
+	gb.cpu_reg.f = gb_state->f;
+	gb.cpu_reg.bc = gb_state->bc;
+	gb.cpu_reg.de = gb_state->de;
+	gb.cpu_reg.hl = gb_state->hl;
+	gb.cpu_reg.sp = gb_state->sp;
+	gb.cpu_reg.pc = gb_state->pc;
+
+	gb.counter.lcd_count = gb_state->lcd_count;
+	gb.counter.div_count = gb_state->div_count;
+	gb.counter.tima_count = gb_state->tima_count;
+	gb.counter.serial_count = gb_state->serial_count;
+
+	gb.gb_reg.TIMA = gb_state->TIMA;
+	gb.gb_reg.TMA = gb_state->TMA;
+	gb.gb_reg.TAC = gb_state->TAC;
+	gb.gb_reg.DIV = gb_state->DIV;
+
+	gb.gb_reg.IF = gb_state->IF;
+
+	gb.gb_reg.LCDC = gb_state->LCDC;
+	gb.gb_reg.SCY = gb_state->SCY;
+	gb.gb_reg.SCX = gb_state->SCX;
+	gb.gb_reg.LYC = gb_state->LYC;
+
+	gb.gb_reg.SC = gb_state->SC;
+	gb.gb_reg.STAT = gb_state->STAT;
+	gb.gb_reg.LY = gb_state->LY;
+
+	gb.gb_reg.WY = gb_state->WY;
+	gb.gb_reg.WX = gb_state->WX;
+	gb.gb_reg.IE = gb_state->IE;
+
+	gb.direct.joypad = gb_state->joypad;
+	gb.gb_reg.P1 = gb_state->P1;
+
+	memcpy(gb.wram, gb_state->wram, sizeof(gb.wram));
+	memcpy(gb.vram, gb_state->vram, sizeof(gb.vram));
+	memcpy(gb.hram, gb_state->hram, sizeof(gb.hram));
+	memcpy(gb.oam, gb_state->oam, sizeof(gb.oam));
+	memcpy(gb.audio_mem, gb_state->audio_mem, sizeof(gb.audio_mem));
+
+	// load cart ram
+	if(SAVESTATE_CART_RAM_SIZE > 0)
+		memcpy(priv.cart_ram, &savestate_buffer[SAVESTATE_CART_RAM], SAVESTATE_CART_RAM_SIZE);
+
+	load_savestate_preview(savestate);
+
+	memcpy(last_frame, current_preview, LCD_WIDTH * LCD_HEIGHT * 2);
+
+	if(current_preview != NULL)
+	{
+		free(current_preview);
+		current_preview = NULL;
+	}
+
+	free(savestate_buffer);
 }
 
 int8_t save_controls(uint32_t (*controls_ptr)[2])
