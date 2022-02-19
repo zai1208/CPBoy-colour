@@ -135,8 +135,10 @@ int8_t save_palette(struct palette *palette);
 void delete_palette(struct palette *palette);
 int8_t save_controls(uint32_t (*controls_ptr)[2]);
 void load_controls(uint32_t (*controls_ptr)[2]);
+void load_savestate_preview(struct savestate *savestate);
 void load_savestates();
 void create_savestate(uint16_t (*preview_frame)[LCD_WIDTH]);
+void delete_savestate(struct savestate *savestate);
 int8_t save_rom_config(bool frameskip, bool interlace, bool turbo_e, 
 	uint8_t turbo_a, uint8_t current_pal);
 void load_rom_config(bool *frameskip, bool *interlace, bool *turbo_e, 
@@ -252,6 +254,7 @@ struct savestate
 };
 
 uint16_t default_palette[3][4];
+uint16_t (*current_preview)[LCD_WIDTH];
 
 struct palette *color_palettes = NULL;
 struct savestate *savestates = NULL;
@@ -776,6 +779,12 @@ uint8_t emulation_menu()
 			while(Input_IsAnyKeyDown()) { }
 
 			in_menu = false;
+
+			if(current_preview != NULL)
+			{
+				free(current_preview);
+				current_preview = NULL;
+			}
 		}
 
 		if(testKey(key1, key2, KEY_RIGHT))
@@ -784,8 +793,37 @@ uint8_t emulation_menu()
 
 			if(selected_tab != (tab_count - 1))
 			{
+				// remove preview stuff if switched from savestate tab
+				if(selected_tab == TAB_SAVESTATES)
+				{
+					free(current_preview);
+					current_preview = NULL;
+
+					// restore LCD
+					for(uint16_t y = 0; y < LCD_HEIGHT; y++)
+					{
+						for(uint16_t x = 0; x < LCD_WIDTH; x++)
+						{
+							vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2)] = last_frame[y][x];
+							vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2) + 1] = last_frame[y][x];
+							vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2)] = last_frame[y][x];
+							vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2) + 1] = last_frame[y][x];
+						}
+					}
+
+					// show emulation paused text
+					draw_pause_overlay();
+				}
+
 				selected_tab++;
 				selected_item = 0;
+			}
+
+			// load savestate preview if on savestate tab
+			if(selected_tab == TAB_SAVESTATES)
+			{
+				if(selected_item < savestate_count)
+					load_savestate_preview(&savestates[selected_item]);
 			}
 		}
 		
@@ -795,8 +833,37 @@ uint8_t emulation_menu()
 
 			if(selected_tab != 0)
 			{
+				// remove preview stuff if switched from savestate tab
+				if(selected_tab == TAB_SAVESTATES)
+				{
+					free(current_preview);
+					current_preview = NULL;
+
+					// restore LCD
+					for(uint16_t y = 0; y < LCD_HEIGHT; y++)
+					{
+						for(uint16_t x = 0; x < LCD_WIDTH; x++)
+						{
+							vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2)] = last_frame[y][x];
+							vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2) + 1] = last_frame[y][x];
+							vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2)] = last_frame[y][x];
+							vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2) + 1] = last_frame[y][x];
+						}
+					}
+
+					// show emulation paused text
+					draw_pause_overlay();
+				}
+
 				selected_tab--;
 				selected_item = 0;
+			}
+
+			// load savestate preview if on savestate tab
+			if(selected_tab == TAB_SAVESTATES)
+			{
+				if(selected_item < savestate_count)
+					load_savestate_preview(&savestates[selected_item]);
 			}
 		}
 		
@@ -810,6 +877,13 @@ uint8_t emulation_menu()
 			// check if on "current" tab and turbo mode can be selected
 			if(!gb.direct.frame_skip && selected_tab == TAB_INFO && selected_item == 1)
 				selected_item = 0;
+
+			// load savestate preview if on savestate tab
+			if(selected_tab == TAB_SAVESTATES)
+			{				
+				if(selected_item < savestate_count)
+					load_savestate_preview(&savestates[selected_item]);
+			} 
 		}
 		
 		if(testKey(key1, key2, KEY_DOWN))
@@ -822,6 +896,34 @@ uint8_t emulation_menu()
 			// check if on "current" tab and turbo mode can be selected
 			if(!gb.direct.frame_skip && selected_tab == TAB_INFO && selected_item == 1)
 				selected_item = 2;
+
+			// load savestate preview if on savestate tab
+			if(selected_tab == TAB_SAVESTATES)
+			{				
+				if(selected_item < savestate_count)
+					load_savestate_preview(&savestates[selected_item]);
+				else
+				{
+					// remove preview stuff 
+					free(current_preview);
+					current_preview = NULL;
+
+					// restore LCD
+					for(uint16_t y = 0; y < LCD_HEIGHT; y++)
+					{
+						for(uint16_t x = 0; x < LCD_WIDTH; x++)
+						{
+							vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2)] = last_frame[y][x];
+							vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2) + 1] = last_frame[y][x];
+							vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2)] = last_frame[y][x];
+							vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2) + 1] = last_frame[y][x];
+						}
+					}
+
+					// show emulation paused text
+					draw_pause_overlay();
+				}
+			} 
 		}
 		
 		if(testKey(key1, key2, KEY_EXE))
@@ -880,6 +982,13 @@ uint8_t emulation_menu()
 				else
 				{
 					// Apply Savestate
+					
+
+					if(current_preview != NULL)
+					{
+						free(current_preview);
+						current_preview = NULL;
+					}
 				}
 				break;
 			case TAB_LOAD_ROM:
@@ -921,6 +1030,32 @@ uint8_t emulation_menu()
 
 				delete_savestate(&savestates[selected_item]);
 				load_savestates();
+
+				if(selected_item == savestate_count)
+				{
+					// remove preview stuff if switched from savestate tab
+					free(current_preview);
+					current_preview = NULL;
+
+					// restore LCD
+					for(uint16_t y = 0; y < LCD_HEIGHT; y++)
+					{
+						for(uint16_t x = 0; x < LCD_WIDTH; x++)
+						{
+							vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2)] = last_frame[y][x];
+							vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2) + 1] = last_frame[y][x];
+							vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2)] = last_frame[y][x];
+							vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2) + 1] = last_frame[y][x];
+						}
+					}
+
+					// show emulation paused text
+					draw_pause_overlay();
+				}
+				else
+				{
+					load_savestate_preview(&savestates[selected_item]);
+				}
 				break;
 			
 			default:
@@ -1162,6 +1297,47 @@ void draw_emulation_menu(uint8_t selected_tab, uint8_t selected_item, const uint
 				print_string(title_string, 0, main_y + 44 + (i * 14), 0, 0xFFFF, (selected_item == i) * 0x8410, 1);
 			}
 
+			// draw preview panel if on savestate
+			if(selected_item < savestate_count)
+			{
+				for(uint16_t y = 0; y < LCD_HEIGHT; y++)
+				{
+					for(uint16_t x = 0; x < LCD_WIDTH; x++)
+					{
+						vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2)] = current_preview[y][x];
+						vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2) + 1] = current_preview[y][x];
+						vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2)] = current_preview[y][x];
+						vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2) + 1] = current_preview[y][x];
+					}
+				}
+
+				// draw preview panel
+				for(uint16_t y = 0; y < 17; y++)
+				{
+					for(uint16_t x = 0; x < LCD_WIDTH; x++)
+					{
+						uint32_t pixel = vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2)];
+					
+						uint8_t red = ((RGB565_TO_R(pixel) * 13108) / 65536);
+						uint8_t green = ((RGB565_TO_G(pixel) * 13108) / 65536);
+						uint8_t blue = ((RGB565_TO_B(pixel) * 13108) / 65536);
+					
+						pixel = RGB_TO_RGB565(red, green, blue); 
+
+						vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2)] = pixel;
+						vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2) + 1] = pixel;
+						vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2)] = pixel;
+						vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2) + 1] = pixel;
+					}
+				}
+
+				print_string("PREVIEW", 116, 4, 1, 0xFFFF, 0x0000, 1);
+
+				// draw preview could not be loaded text
+				if(current_preview == NULL)
+					print_string("Error loading preview", 96, 155, 0, 0xFFFF, 0x0000, 0);
+			}
+			
 			// draw new button
 			print_string(" New Savestate                                        ", 0, 
 				main_y + 44 + (savestate_count * 14), 0, 0xFFFF, (selected_item == savestate_count) * 0x8410, 1);
@@ -2482,6 +2658,32 @@ void load_palettes()
 	findClose(find_handle);
 }
 
+void load_savestate_preview(struct savestate *savestate)
+{
+	if(current_preview != NULL)
+	{
+		free(current_preview);
+		current_preview = NULL;
+	}
+
+	int fd = open(savestate->file, OPEN_READ);
+
+	if(fd < 0)
+		return;
+
+	current_preview = (uint16_t (*)[LCD_WIDTH])malloc(LCD_WIDTH * LCD_HEIGHT * 2);
+
+	lseek(fd, SAVESTATE_PREVIEW, SEEK_CUR);
+
+	if(read(fd, current_preview, LCD_WIDTH * LCD_HEIGHT * 2) < 0)
+	{
+		free(current_preview);
+		current_preview = NULL;
+	}
+
+	close(fd);
+}
+
 void load_savestates()
 {
 	char rom_name[17];
@@ -2680,8 +2882,16 @@ void create_savestate(uint16_t (*preview_frame)[LCD_WIDTH])
 	strcat(savestate_path, rom_name);
 
 	// make dirs
-	mkdir("\\fls0\\CPBoy");
-	mkdir("\\fls0\\CPBoy\\savestates");
+	struct stat dstat;
+
+	if(stat("\\fls0\\CPBoy", &dstat) != 0)
+		mkdir("\\fls0\\CPBoy");	
+		
+	if(stat("\\fls0\\CPBoy\\savestates", &dstat) != 0)
+		mkdir("\\fls0\\CPBoy\\savestates");
+
+	if(stat(savestate_path, &dstat) != 0)
+		mkdir(savestate_path);
 
 	strcat(savestate_path, "\\");
 	strcat(savestate_path, savestate_name);
