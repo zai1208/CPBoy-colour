@@ -51,7 +51,7 @@
 
 /* Adds more code to improve LCD rendering accuracy. */
 #ifndef PEANUT_GB_HIGH_LCD_ACCURACY
-# define PEANUT_GB_HIGH_LCD_ACCURACY 1
+# define PEANUT_GB_HIGH_LCD_ACCURACY 0
 #endif
 
 /* Play BIOS before playing cartridge.
@@ -4022,4 +4022,3 @@ void gb_set_rtc(struct gb_s *gb, const struct tm * const time);
 #undef PGB_GET_HALFC
 #undef PGB_GET_ARITH
 #undef PGB_GET_ZERO
-#endif //PEANUT_GB_H
