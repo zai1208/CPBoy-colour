@@ -2811,8 +2811,9 @@ void create_savestate(uint16_t (*preview_frame)[LCD_WIDTH])
 
 	gb_state->gb_halt = gb.gb_halt;
 	gb_state->gb_ime = gb.gb_ime;
+#if PEANUT_GB_USE_BIOS
 	gb_state->gb_bios_enable = gb.gb_bios_enable;
-
+#endif
 	gb_state->lcd_mode = gb.lcd_mode;
 	
 	gb_state->selected_rom_bank = gb.selected_rom_bank;
@@ -2922,7 +2923,9 @@ void apply_savestate(struct savestate *savestate, uint16_t (*last_frame)[LCD_WID
 	// apply state
 	gb.gb_halt = gb_state->gb_halt;
 	gb.gb_ime = gb_state->gb_ime;
+#if PEANUT_GB_USE_BIOS
 	gb.gb_bios_enable = gb_state->gb_bios_enable;
+#endif
 	gb.lcd_mode = gb_state->lcd_mode;
 
 	gb.selected_rom_bank = gb_state->selected_rom_bank;
