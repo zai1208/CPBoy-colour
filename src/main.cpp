@@ -36,6 +36,8 @@
 
 // #define MAX_ROM_SIZE 0x10000
 
+#define CPBOY_VERSION   "v0.1.1-alpha"
+
 #define GB_KEY_UP				0
 #define GB_KEY_DOWN			1
 #define GB_KEY_LEFT			2
@@ -93,7 +95,7 @@
 APP_NAME("CPBoy")
 APP_DESCRIPTION("A Gameboy (DMG) emulator. Forked from PeanutGB by deltabeard.")
 APP_AUTHOR("diddyholz")
-APP_VERSION("0.1.0-alpha")
+APP_VERSION(CPBOY_VERSION)
 
 uint8_t *read_rom_to_ram(const char *file_name);
 uint8_t gb_rom_read(struct gb_s *gb, const uint_fast32_t addr);
@@ -313,6 +315,8 @@ void main()
 	findFiles();
 
 	// menu
+	const uint16_t color_success = 0x07E0;
+
 	bool inMenu = true;
 	bool buttonPressed = false;
 
@@ -323,10 +327,8 @@ void main()
 		// render
 		fillScreen(color(0, 0, 0));
 
-		const uint16_t color_success = 0x07E0;
-
 		print_string("CPBOY", 124, 8, 1, 0x001F, 0x0000, 1); // color(0, 0, 255)
-		print_string("Version 0.0.2-alpha", 100, 44, 0, 0xF800, 0x0000, 1); // color(255, 0, 0)
+		print_string(CPBOY_VERSION, 103, 44, 0, 0xF800, 0x0000, 1); // color(255, 0, 0)
 		// print_string("[Dev Build]", 124, 64, 0, 0xFFE0, 0x0000, 1); // color(255, 255, 0)
 
 		Debug_Printf(0, 9 + menuIndex, true, 0, ">");
@@ -2208,7 +2210,7 @@ void show_credits_dialog()
 		print_string("Credits", 135, dialog_y + 5, 0, dialog_border, 0x0000, 1);
 
 		// draw subtitle
-		print_string("Version 0.0.2-alpha", 100, dialog_y + 23, 0, subtitle_fg, 0x0000, 1);
+		print_string(CPBOY_VERSION, 103, dialog_y + 23, 0, subtitle_fg, 0x0000, 1);
 
 		// draw credits
 		print_string("Built on github.com/deltabeard/Peanut-GB", dialog_x + 8, dialog_y + 51, 0, 0xFFFF, 0x0000, 1);
