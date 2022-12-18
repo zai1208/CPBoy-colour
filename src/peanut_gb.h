@@ -968,8 +968,11 @@ void __gb_write(struct gb_s *gb, const uint_fast16_t addr, const uint8_t val)
 					return;
 				}
 
-				gb->hram_io[IO_STAT] = (gb->hram_io[IO_STAT] & ~0x03) | 1;
+				/* Set LCD to Mode 0. */
+				gb->hram_io[IO_STAT] = (gb->hram_io[IO_STAT] & ~0x03);
+				/* Set to line 0. */
 				gb->hram_io[IO_LY] = 0;
+				/* Reset LCD timer. */
 				gb->counter.lcd_count = 0;
 			}
 
@@ -1570,20 +1573,12 @@ void __gb_draw_line(struct gb_s *gb)
 				uint8_t c = (t1 & 0x1) | ((t2 & 0x1) << 1);
 				// check transparency / sprite overlap / background overlap
 
-				if(c && (OF & OBJ_PRIORITY) && tile_has_priority)
-				{
-					/* Set pixel colour. */
-					pixels[disp_x] ^= (OF & OBJ_PALETTE)
-						? gb->display.sp_palette[c + 4]
-						: gb->display.sp_palette[c];
-					pixels[disp_x] = ((~pixels[disp_x]) & 0x3);
-				}
-				else if(c && !(OF & OBJ_PRIORITY && (pixels[disp_x] & 0x3)))
+				if(c && !(OF & OBJ_PRIORITY && !((pixels[disp_x] & 0x3) == gb->display.bg_palette[0])))
 				{
 					/* Set pixel colour. */
 					pixels[disp_x] = (OF & OBJ_PALETTE)
-							 ? gb->display.sp_palette[c + 4]
-							 : gb->display.sp_palette[c];
+						? gb->display.sp_palette[c + 4]
+						: gb->display.sp_palette[c];
 					/* Set pixel palette (OBJ0 or OBJ1). */
 					pixels[disp_x] |= (OF & OBJ_PALETTE);
 				}
