@@ -1,6 +1,5 @@
+# Build items
 *.o
-*.gch
-*.gcda
 *.a
 *.exe
 peanut-sdl
