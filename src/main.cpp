@@ -137,11 +137,11 @@ int8_t save_palette(struct palette *palette);
 void delete_palette(struct palette *palette);
 int8_t save_controls(uint32_t (*controls_ptr)[2]);
 void load_controls(uint32_t (*controls_ptr)[2]);
-void load_savestate_preview(struct savestate *savestate);
-void load_savestates();
-void create_savestate(uint16_t (*preview_frame)[LCD_WIDTH]);
-void delete_savestate(struct savestate *savestate);
-void apply_savestate(struct savestate *savestate, uint16_t (*last_frame)[LCD_WIDTH]);
+// void load_savestate_preview(struct savestate *savestate);
+// void load_savestates();
+// void create_savestate(uint16_t (*preview_frame)[LCD_WIDTH]);
+// void delete_savestate(struct savestate *savestate);
+// void apply_savestate(struct savestate *savestate, uint16_t (*last_frame)[LCD_WIDTH]);
 int8_t save_rom_config(bool frameskip, bool interlace, bool turbo_e, 
 	uint8_t turbo_a, uint8_t current_pal);
 void load_rom_config(bool *frameskip, bool *interlace, bool *turbo_e, 
@@ -176,6 +176,7 @@ struct priv_t
 	uint16_t (*selected_palette)[4];
 };
 
+/*
 struct gb_state
 {
 	uint8_t gb_halt;
@@ -229,7 +230,7 @@ struct gb_state
 	uint8_t hram[HRAM_SIZE];
 	uint8_t oam[OAM_SIZE];
 	uint8_t audio_mem[AUDIO_MEM_SIZE];
-};
+}; */
 
 struct gb_s gb;
 struct priv_t priv =
@@ -247,20 +248,20 @@ struct palette
 	uint16_t data[3][4];
 };
 
-struct savestate
-{
-	/* The name of the savestate */
-	char name[25];
+// struct savestate
+// {
+// 	/* The name of the savestate */
+// 	char name[25];
 	
-	/* Full location to savestatefile */
-	char file[200];
-};
+// 	/* Full location to savestatefile */
+// 	char file[200];
+// };
 
 uint16_t default_palette[3][4];
 uint16_t (*current_preview)[LCD_WIDTH];
 
 struct palette *color_palettes = NULL;
-struct savestate *savestates = NULL;
+// struct savestate *savestates = NULL;
 
 uint32_t controls[8][2];
 
@@ -307,7 +308,7 @@ void main()
 		memcpy(default_palette, _default_palette, sizeof(default_palette));
 	}
 
-	savestates = NULL;
+	// savestates = NULL;
 
 	controls_changed = false;
 	rom_config_changed = false;
@@ -315,8 +316,6 @@ void main()
 	findFiles();
 
 	// menu
-	const uint16_t color_success = 0x07E0;
-
 	bool inMenu = true;
 	bool buttonPressed = false;
 
@@ -430,12 +429,12 @@ uint8_t load_rom(char *file_name)
 
 	free(priv.rom);
 	free(color_palettes);
-	free(savestates);
+	// free(savestates);
 
 	priv.cart_ram = NULL;
 	priv.rom = NULL;
 	color_palettes = NULL;
-	savestates = NULL;
+	// savestates = NULL;
 
 	return menu_code;
 }
@@ -503,7 +502,7 @@ uint8_t initEmulator()
 	rom_config_changed = false;
 
 	load_palettes();
-	load_savestates();
+	// load_savestates();
 
 	// check if loaded palette is out of range
 	if(current_palette >= palette_count)
@@ -756,7 +755,8 @@ uint8_t emulation_menu()
 
 	while(in_menu)
 	{
-		uint8_t item_counts[tab_count] = { 5, savestate_count + 1, dirFiles, 3 };
+		// uint8_t item_counts[tab_count] = { 5, savestate_count + 1, dirFiles, 3 };
+		uint8_t item_counts[tab_count] = { 5, 1, dirFiles, 3 };
 
 		draw_emulation_menu(selected_tab, selected_item, tab_count);
 		LCD_Refresh();
@@ -794,23 +794,23 @@ uint8_t emulation_menu()
 				// remove preview stuff if switched from savestate tab
 				if(selected_tab == TAB_SAVESTATES)
 				{
-					free(current_preview);
-					current_preview = NULL;
+					// free(current_preview);
+					// current_preview = NULL;
 
-					// restore LCD
-					for(uint16_t y = 0; y < LCD_HEIGHT; y++)
-					{
-						for(uint16_t x = 0; x < LCD_WIDTH; x++)
-						{
-							vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2)] = last_frame[y][x];
-							vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2) + 1] = last_frame[y][x];
-							vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2)] = last_frame[y][x];
-							vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2) + 1] = last_frame[y][x];
-						}
-					}
+					// // restore LCD
+					// for(uint16_t y = 0; y < LCD_HEIGHT; y++)
+					// {
+					// 	for(uint16_t x = 0; x < LCD_WIDTH; x++)
+					// 	{
+					// 		vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2)] = last_frame[y][x];
+					// 		vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2) + 1] = last_frame[y][x];
+					// 		vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2)] = last_frame[y][x];
+					// 		vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2) + 1] = last_frame[y][x];
+					// 	}
+					// }
 
-					// show emulation paused text
-					draw_pause_overlay();
+					// // show emulation paused text
+					// draw_pause_overlay();
 				}
 
 				selected_tab++;
@@ -820,8 +820,8 @@ uint8_t emulation_menu()
 			// load savestate preview if on savestate tab
 			if(selected_tab == TAB_SAVESTATES)
 			{
-				if(selected_item < savestate_count)
-					load_savestate_preview(&savestates[selected_item]);
+				// if(selected_item < savestate_count)
+				// 	load_savestate_preview(&savestates[selected_item]);
 			}
 		}
 		
@@ -831,23 +831,23 @@ uint8_t emulation_menu()
 
 			if(selected_tab != 0)
 			{
-				// remove preview stuff if switched from savestate tab
-				if(selected_tab == TAB_SAVESTATES)
-				{
-					free(current_preview);
-					current_preview = NULL;
+				// // remove preview stuff if switched from savestate tab
+				// if(selected_tab == TAB_SAVESTATES)
+				// {
+				// 	free(current_preview);
+				// 	current_preview = NULL;
 
-					// restore LCD
-					for(uint16_t y = 0; y < LCD_HEIGHT; y++)
-					{
-						for(uint16_t x = 0; x < LCD_WIDTH; x++)
-						{
-							vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2)] = last_frame[y][x];
-							vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2) + 1] = last_frame[y][x];
-							vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2)] = last_frame[y][x];
-							vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2) + 1] = last_frame[y][x];
-						}
-					}
+				// 	// restore LCD
+				// 	for(uint16_t y = 0; y < LCD_HEIGHT; y++)
+				// 	{
+				// 		for(uint16_t x = 0; x < LCD_WIDTH; x++)
+				// 		{
+				// 			vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2)] = last_frame[y][x];
+				// 			vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2) + 1] = last_frame[y][x];
+				// 			vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2)] = last_frame[y][x];
+				// 			vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2) + 1] = last_frame[y][x];
+				// 		}
+				// 	}
 
 					// show emulation paused text
 					draw_pause_overlay();
@@ -860,8 +860,8 @@ uint8_t emulation_menu()
 			// load savestate preview if on savestate tab
 			if(selected_tab == TAB_SAVESTATES)
 			{
-				if(selected_item < savestate_count)
-					load_savestate_preview(&savestates[selected_item]);
+				// if(selected_item < savestate_count)
+				// 	load_savestate_preview(&savestates[selected_item]);
 			}
 		}
 		
@@ -879,8 +879,8 @@ uint8_t emulation_menu()
 			// load savestate preview if on savestate tab
 			if(selected_tab == TAB_SAVESTATES)
 			{				
-				if(selected_item < savestate_count)
-					load_savestate_preview(&savestates[selected_item]);
+				// if(selected_item < savestate_count)
+				// 	load_savestate_preview(&savestates[selected_item]);
 			} 
 		}
 		
@@ -898,29 +898,29 @@ uint8_t emulation_menu()
 			// load savestate preview if on savestate tab
 			if(selected_tab == TAB_SAVESTATES)
 			{				
-				if(selected_item < savestate_count)
-					load_savestate_preview(&savestates[selected_item]);
-				else
-				{
-					// remove preview stuff 
-					free(current_preview);
-					current_preview = NULL;
+				// if(selected_item < savestate_count)
+				// 	load_savestate_preview(&savestates[selected_item]);
+				// else
+				// {
+				// 	// remove preview stuff 
+				// 	free(current_preview);
+				// 	current_preview = NULL;
 
-					// restore LCD
-					for(uint16_t y = 0; y < LCD_HEIGHT; y++)
-					{
-						for(uint16_t x = 0; x < LCD_WIDTH; x++)
-						{
-							vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2)] = last_frame[y][x];
-							vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2) + 1] = last_frame[y][x];
-							vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2)] = last_frame[y][x];
-							vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2) + 1] = last_frame[y][x];
-						}
-					}
+				// 	// restore LCD
+				// 	for(uint16_t y = 0; y < LCD_HEIGHT; y++)
+				// 	{
+				// 		for(uint16_t x = 0; x < LCD_WIDTH; x++)
+				// 		{
+				// 			vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2)] = last_frame[y][x];
+				// 			vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2) + 1] = last_frame[y][x];
+				// 			vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2)] = last_frame[y][x];
+				// 			vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2) + 1] = last_frame[y][x];
+				// 		}
+				// 	}
 
-					// show emulation paused text
-					draw_pause_overlay();
-				}
+				// 	// show emulation paused text
+				// 	draw_pause_overlay();
+				// }
 			} 
 		}
 		
@@ -971,20 +971,20 @@ uint8_t emulation_menu()
 				}
 				break;
 			case TAB_SAVESTATES:
-				if(selected_item == savestate_count)
-				{
-					// New Savestate
-					create_savestate(last_frame);
-					load_savestates();
-					load_savestate_preview(&savestates[selected_item]);
-				}
-				else
-				{
-					// Apply Savestate (current_preview already gets freed in the function)
-					apply_savestate(&savestates[selected_item], last_frame);
+				// if(selected_item == savestate_count)
+				// {
+				// 	// New Savestate
+				// 	create_savestate(last_frame);
+				// 	load_savestates();
+				// 	load_savestate_preview(&savestates[selected_item]);
+				// }
+				// else
+				// {
+				// 	// Apply Savestate (current_preview already gets freed in the function)
+				// 	apply_savestate(&savestates[selected_item], last_frame);
 
-					in_menu = false;
-				}
+				// 	in_menu = false;
+				// }
 				break;
 			case TAB_LOAD_ROM:
 			{
@@ -1014,49 +1014,49 @@ uint8_t emulation_menu()
 			}
 		}
 	
-		if(testKey(key1, key2, KEY_CLEAR))
-		{
-			switch (selected_tab)
-			{
-			case TAB_SAVESTATES:
-				// stop if selected item is the "new savestate" btn
-				if(selected_item == savestate_count)
-					break;
+		// if(testKey(key1, key2, KEY_CLEAR))
+		// {
+		// 	switch (selected_tab)
+		// 	{
+		// 	case TAB_SAVESTATES:
+		// 		// stop if selected item is the "new savestate" btn
+		// 		if(selected_item == savestate_count)
+		// 			break;
 
-				delete_savestate(&savestates[selected_item]);
-				load_savestates();
+		// 		delete_savestate(&savestates[selected_item]);
+		// 		load_savestates();
 
-				if(selected_item == savestate_count)
-				{
-					// remove preview stuff if switched from savestate tab
-					free(current_preview);
-					current_preview = NULL;
+		// 		if(selected_item == savestate_count)
+		// 		{
+		// 			// remove preview stuff if switched from savestate tab
+		// 			free(current_preview);
+		// 			current_preview = NULL;
 
-					// restore LCD
-					for(uint16_t y = 0; y < LCD_HEIGHT; y++)
-					{
-						for(uint16_t x = 0; x < LCD_WIDTH; x++)
-						{
-							vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2)] = last_frame[y][x];
-							vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2) + 1] = last_frame[y][x];
-							vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2)] = last_frame[y][x];
-							vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2) + 1] = last_frame[y][x];
-						}
-					}
+		// 			// restore LCD
+		// 			for(uint16_t y = 0; y < LCD_HEIGHT; y++)
+		// 			{
+		// 				for(uint16_t x = 0; x < LCD_WIDTH; x++)
+		// 				{
+		// 					vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2)] = last_frame[y][x];
+		// 					vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2) + 1] = last_frame[y][x];
+		// 					vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2)] = last_frame[y][x];
+		// 					vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2) + 1] = last_frame[y][x];
+		// 				}
+		// 			}
 
-					// show emulation paused text
-					draw_pause_overlay();
-				}
-				else
-				{
-					load_savestate_preview(&savestates[selected_item]);
-				}
-				break;
+		// 			// show emulation paused text
+		// 			draw_pause_overlay();
+		// 		}
+		// 		else
+		// 		{
+		// 			load_savestate_preview(&savestates[selected_item]);
+		// 		}
+		// 		break;
 			
-			default:
-				break;
-			}
-		}
+		// 	default:
+		// 		break;
+		// 	}
+		// }
 	}
 
 	// draw menu overlay
@@ -1275,64 +1275,64 @@ void draw_emulation_menu(uint8_t selected_tab, uint8_t selected_item, const uint
 			print_string(title_string, 0, main_y + 20, 0, 0x0000, 0x0000, 1);
 
 			// draw interactive menu
-			for (uint8_t i = 0; i < savestate_count; i++) 
-			{
+			// for (uint8_t i = 0; i < savestate_count; i++) 
+			// {
 
-				strcpy(title_string, " ");
-				strcat(title_string, savestates[i].name);
+			// 	strcpy(title_string, " ");
+			// 	strcat(title_string, savestates[i].name);
 
-				// fill with spaces
-				for(uint8_t l = strlen(title_string); l < 54; l++)
-					strcat(title_string, " ");
+			// 	// fill with spaces
+			// 	for(uint8_t l = strlen(title_string); l < 54; l++)
+			// 		strcat(title_string, " ");
 						
-				// draw name
-				print_string(title_string, 0, main_y + 44 + (i * 14), 0, 0xFFFF, (selected_item == i) * 0x8410, 1);
-			}
+			// 	// draw name
+			// 	print_string(title_string, 0, main_y + 44 + (i * 14), 0, 0xFFFF, (selected_item == i) * 0x8410, 1);
+			// }
 
-			// draw preview panel if on savestate
-			if(selected_item < savestate_count)
-			{
-				for(uint16_t y = 0; y < LCD_HEIGHT; y++)
-				{
-					for(uint16_t x = 0; x < LCD_WIDTH; x++)
-					{
-						vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2)] = current_preview[y][x];
-						vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2) + 1] = current_preview[y][x];
-						vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2)] = current_preview[y][x];
-						vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2) + 1] = current_preview[y][x];
-					}
-				}
+			// // draw preview panel if on savestate
+			// if(selected_item < savestate_count)
+			// {
+			// 	for(uint16_t y = 0; y < LCD_HEIGHT; y++)
+			// 	{
+			// 		for(uint16_t x = 0; x < LCD_WIDTH; x++)
+			// 		{
+			// 			vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2)] = current_preview[y][x];
+			// 			vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2) + 1] = current_preview[y][x];
+			// 			vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2)] = current_preview[y][x];
+			// 			vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2) + 1] = current_preview[y][x];
+			// 		}
+			// 	}
 
-				// draw preview panel
-				for(uint16_t y = 0; y < 17; y++)
-				{
-					for(uint16_t x = 0; x < LCD_WIDTH; x++)
-					{
-						uint32_t pixel = vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2)];
+			// 	// draw preview panel
+			// 	for(uint16_t y = 0; y < 17; y++)
+			// 	{
+			// 		for(uint16_t x = 0; x < LCD_WIDTH; x++)
+			// 		{
+			// 			uint32_t pixel = vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2)];
 					
-						uint8_t red = ((RGB565_TO_R(pixel) * 13108) / 65536);
-						uint8_t green = ((RGB565_TO_G(pixel) * 13108) / 65536);
-						uint8_t blue = ((RGB565_TO_B(pixel) * 13108) / 65536);
+			// 			uint8_t red = ((RGB565_TO_R(pixel) * 13108) / 65536);
+			// 			uint8_t green = ((RGB565_TO_G(pixel) * 13108) / 65536);
+			// 			uint8_t blue = ((RGB565_TO_B(pixel) * 13108) / 65536);
 					
-						pixel = RGB_TO_RGB565(red, green, blue); 
+			// 			pixel = RGB_TO_RGB565(red, green, blue); 
 
-						vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2)] = pixel;
-						vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2) + 1] = pixel;
-						vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2)] = pixel;
-						vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2) + 1] = pixel;
-					}
-				}
+			// 			vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2)] = pixel;
+			// 			vram[((y * 2) * (LCD_WIDTH * 2)) + (x * 2) + 1] = pixel;
+			// 			vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2)] = pixel;
+			// 			vram[(((y * 2) + 1) * (LCD_WIDTH * 2)) + (x * 2) + 1] = pixel;
+			// 		}
+			// 	}
 
-				print_string("PREVIEW", 116, 4, 1, 0xFFFF, 0x0000, 1);
+			// 	print_string("PREVIEW", 116, 4, 1, 0xFFFF, 0x0000, 1);
 
-				// draw preview could not be loaded text
-				if(current_preview == NULL)
-					print_string("Error loading preview", 96, 155, 0, 0xFFFF, 0x0000, 0);
-			}
+			// 	// draw preview could not be loaded text
+			// 	if(current_preview == NULL)
+			// 		print_string("Error loading preview", 96, 155, 0, 0xFFFF, 0x0000, 0);
+			// }
 			
-			// draw new button
-			print_string(" New Savestate                                        ", 0, 
-				main_y + 44 + (savestate_count * 14), 0, 0xFFFF, (selected_item == savestate_count) * 0x8410, 1);
+			// // draw new button
+			// print_string(" New Savestate                                        ", 0, 
+			// 	main_y + 44 + (savestate_count * 14), 0, 0xFFFF, (selected_item == savestate_count) * 0x8410, 1);
 			
 			break;
 		}
@@ -2655,344 +2655,344 @@ void load_palettes()
 	findClose(find_handle);
 }
 
-void load_savestate_preview(struct savestate *savestate)
-{
-	if(current_preview != NULL)
-	{
-		free(current_preview);
-		current_preview = NULL;
-	}
+// void load_savestate_preview(struct savestate *savestate)
+// {
+// 	if(current_preview != NULL)
+// 	{
+// 		free(current_preview);
+// 		current_preview = NULL;
+// 	}
 
-	int fd = open(savestate->file, OPEN_READ);
+// 	int fd = open(savestate->file, OPEN_READ);
 
-	if(fd < 0)
-		return;
+// 	if(fd < 0)
+// 		return;
 
-	current_preview = (uint16_t (*)[LCD_WIDTH])malloc(LCD_WIDTH * LCD_HEIGHT * 2);
+// 	current_preview = (uint16_t (*)[LCD_WIDTH])malloc(LCD_WIDTH * LCD_HEIGHT * 2);
 
-	lseek(fd, SAVESTATE_PREVIEW, SEEK_CUR);
+// 	lseek(fd, SAVESTATE_PREVIEW, SEEK_CUR);
 
-	if(read(fd, current_preview, LCD_WIDTH * LCD_HEIGHT * 2) < 0)
-	{
-		free(current_preview);
-		current_preview = NULL;
-	}
+// 	if(read(fd, current_preview, LCD_WIDTH * LCD_HEIGHT * 2) < 0)
+// 	{
+// 		free(current_preview);
+// 		current_preview = NULL;
+// 	}
 
-	close(fd);
-}
+// 	close(fd);
+// }
 
-void load_savestates()
-{
-	char rom_name[17];
-	gb_get_rom_name(&gb, rom_name);
+// void load_savestates()
+// {
+// 	char rom_name[17];
+// 	gb_get_rom_name(&gb, rom_name);
 
-	if(savestates != NULL)
-		free(savestates);
+// 	if(savestates != NULL)
+// 		free(savestates);
 
-	savestate_count = 0;
+// 	savestate_count = 0;
 
-	// get all savestates
-	char savestate_path[48] = "\\fls0\\CPBoy\\savestates\\";
-	strcat(savestate_path, rom_name);
-	strcat(savestate_path, "\\*.gbss");
+// 	// get all savestates
+// 	char savestate_path[48] = "\\fls0\\CPBoy\\savestates\\";
+// 	strcat(savestate_path, rom_name);
+// 	strcat(savestate_path, "\\*.gbss");
 
-	wchar_t w_savestate_path[sizeof(savestate_path)];
+// 	wchar_t w_savestate_path[sizeof(savestate_path)];
 
-	memset(w_savestate_path, 0, sizeof(w_savestate_path));
+// 	memset(w_savestate_path, 0, sizeof(w_savestate_path));
 	
-	for(uint8_t i = 0; savestate_path[i] != 0; i++)
-	{
-		wchar_t ch = savestate_path[i];
-		w_savestate_path[i] = ch;
-	}
+// 	for(uint8_t i = 0; savestate_path[i] != 0; i++)
+// 	{
+// 		wchar_t ch = savestate_path[i];
+// 		w_savestate_path[i] = ch;
+// 	}
 
-	wchar_t file_name[100];
-	struct findInfo find_info;
+// 	wchar_t file_name[100];
+// 	struct findInfo find_info;
 
-	int find_handle;
-	int ret = findFirst(w_savestate_path, &find_handle, file_name, &find_info);
+// 	int find_handle;
+// 	int ret = findFirst(w_savestate_path, &find_handle, file_name, &find_info);
 
-	// get file count
-	while(ret >= 0) 
-	{
-		savestate_count++;
+// 	// get file count
+// 	while(ret >= 0) 
+// 	{
+// 		savestate_count++;
 
-		//serch next
-		ret = findNext(find_handle, file_name, &find_info);
-	}
+// 		//serch next
+// 		ret = findNext(find_handle, file_name, &find_info);
+// 	}
 
-	findClose(find_handle);
+// 	findClose(find_handle);
 	
-	// create big enough array
-	savestates = (savestate *)malloc(savestate_count * sizeof(savestate));
+// 	// create big enough array
+// 	savestates = (savestate *)malloc(savestate_count * sizeof(savestate));
 
-	// populate savestates
-	uint8_t savestate_id = 0;
+// 	// populate savestates
+// 	uint8_t savestate_id = 0;
 
-	ret = findFirst(w_savestate_path, &find_handle, file_name, &find_info);
+// 	ret = findFirst(w_savestate_path, &find_handle, file_name, &find_info);
 
-	while(ret >= 0) 
-	{
-		char savestate_file[200] = "\\fls0\\CPBoy\\savestates\\";
-		char temp[100];
+// 	while(ret >= 0) 
+// 	{
+// 		char savestate_file[200] = "\\fls0\\CPBoy\\savestates\\";
+// 		char temp[100];
 
-		uint8_t savestate_name_buffer[SAVESTATE_NAME_SIZE];
+// 		uint8_t savestate_name_buffer[SAVESTATE_NAME_SIZE];
 
-		uint8_t file_name_size = 0;
+// 		uint8_t file_name_size = 0;
 
-		//copy file name
-		for(uint8_t i = 0; file_name[i] != 0; i++) 
-		{
-			wchar_t ch = file_name[i];
-			temp[i] = ch;
+// 		//copy file name
+// 		for(uint8_t i = 0; file_name[i] != 0; i++) 
+// 		{
+// 			wchar_t ch = file_name[i];
+// 			temp[i] = ch;
 
-			file_name_size++;
-		}
+// 			file_name_size++;
+// 		}
 
-		temp[file_name_size] = 0;
+// 		temp[file_name_size] = 0;
 
-		strcat(savestate_file, rom_name);
-		strcat(savestate_file, "\\");
-		strcat(savestate_file, temp);
+// 		strcat(savestate_file, rom_name);
+// 		strcat(savestate_file, "\\");
+// 		strcat(savestate_file, temp);
 
-		// load this state
-		int fd = open(savestate_file, OPEN_READ);
+// 		// load this state
+// 		int fd = open(savestate_file, OPEN_READ);
 
-		if(fd >= 0)
-		{
-			read(fd, savestate_name_buffer, SAVESTATE_NAME_SIZE);
-			close(fd);
+// 		if(fd >= 0)
+// 		{
+// 			read(fd, savestate_name_buffer, SAVESTATE_NAME_SIZE);
+// 			close(fd);
 
-			strcpy(savestates[savestate_id].name, (char *)&savestate_name_buffer[SAVESTATE_NAME]);
-			strcpy(savestates[savestate_id].file, savestate_file);
-		}
+// 			strcpy(savestates[savestate_id].name, (char *)&savestate_name_buffer[SAVESTATE_NAME]);
+// 			strcpy(savestates[savestate_id].file, savestate_file);
+// 		}
 
-		//serch next
-		ret = findNext(find_handle, file_name, &find_info);
+// 		//serch next
+// 		ret = findNext(find_handle, file_name, &find_info);
 
-		savestate_id++;
-	}
+// 		savestate_id++;
+// 	}
 	
-	findClose(find_handle);
-}
+// 	findClose(find_handle);
+// }
 
-void create_savestate(uint16_t (*preview_frame)[LCD_WIDTH])
-{
-	char savestate_name[100] = "State ";
-	char number[4];
+// void create_savestate(uint16_t (*preview_frame)[LCD_WIDTH])
+// {
+// 	char savestate_name[100] = "State ";
+// 	char number[4];
 
-	uint8_t lowest = 0;
+// 	uint8_t lowest = 0;
 
-	// get current lowest savestate number
-	for(uint8_t i = 0; i < savestate_count; i++)
-	{
-		uint8_t current_number = convert_string_to_byte(savestates[i].name + sizeof("State ") - 1);
+// 	// get current lowest savestate number
+// 	for(uint8_t i = 0; i < savestate_count; i++)
+// 	{
+// 		uint8_t current_number = convert_string_to_byte(savestates[i].name + sizeof("State ") - 1);
 
-		if(lowest == current_number)
-		{
-			lowest++;
-			i = 255; 	// restart for loop
-		}
-	}
+// 		if(lowest == current_number)
+// 		{
+// 			lowest++;
+// 			i = 255; 	// restart for loop
+// 		}
+// 	}
 
-	convert_byte_to_string(lowest, number);
-	strcat(savestate_name, number);
+// 	convert_byte_to_string(lowest, number);
+// 	strcat(savestate_name, number);
 
-	// create actual savestate file
-	uint8_t *savestate_buffer = (uint8_t *)malloc(SAVESTATE_SIZE);
-	memset(savestate_buffer, 0, sizeof(savestate_buffer));
+// 	// create actual savestate file
+// 	uint8_t *savestate_buffer = (uint8_t *)malloc(SAVESTATE_SIZE);
+// 	memset(savestate_buffer, 0, sizeof(savestate_buffer));
 
-	// copy savestate name
-	strcpy((char *)savestate_buffer, savestate_name);
+// 	// copy savestate name
+// 	strcpy((char *)savestate_buffer, savestate_name);
 
-	// copy savestate preview
-	memcpy(&savestate_buffer[SAVESTATE_PREVIEW], preview_frame, SAVESTATE_PREVIEW_SIZE);
+// 	// copy savestate preview
+// 	memcpy(&savestate_buffer[SAVESTATE_PREVIEW], preview_frame, SAVESTATE_PREVIEW_SIZE);
 
-	// copy gb stuff
-	struct gb_state *gb_state = (struct gb_state *)&savestate_buffer[SAVESTATE_GB_STATE];
+// 	// copy gb stuff
+// 	struct gb_state *gb_state = (struct gb_state *)&savestate_buffer[SAVESTATE_GB_STATE];
 
-	gb_state->gb_halt = gb.gb_halt;
-	gb_state->gb_ime = gb.gb_ime;
-#if PEANUT_GB_USE_BIOS
-	gb_state->gb_bios_enable = gb.gb_bios_enable;
-#endif
-	gb_state->lcd_mode = gb.lcd_mode;
+// 	gb_state->gb_halt = gb.gb_halt;
+// 	gb_state->gb_ime = gb.gb_ime;
+// #if PEANUT_GB_USE_BIOS
+// 	gb_state->gb_bios_enable = gb.gb_bios_enable;
+// #endif
+// 	gb_state->lcd_mode = gb.lcd_mode;
 	
-	gb_state->selected_rom_bank = gb.selected_rom_bank;
-	gb_state->cart_ram_bank = gb.cart_ram_bank;
-	gb_state->enable_cart_ram = gb.enable_cart_ram;
-	gb_state->cart_mode_select = gb.cart_mode_select;
+// 	gb_state->selected_rom_bank = gb.selected_rom_bank;
+// 	gb_state->cart_ram_bank = gb.cart_ram_bank;
+// 	gb_state->enable_cart_ram = gb.enable_cart_ram;
+// 	gb_state->cart_mode_select = gb.cart_mode_select;
 	
-	gb_state->a = gb.cpu_reg.a;
-	gb_state->f = gb.cpu_reg.f;
-	gb_state->bc = gb.cpu_reg.bc;
-	gb_state->de = gb.cpu_reg.de;
-	gb_state->hl = gb.cpu_reg.hl;
-	gb_state->sp = gb.cpu_reg.sp;
-	gb_state->pc = gb.cpu_reg.pc;
+// 	gb_state->a = gb.cpu_reg.a;
+// 	gb_state->f = gb.cpu_reg.f;
+// 	gb_state->bc = gb.cpu_reg.bc;
+// 	gb_state->de = gb.cpu_reg.de;
+// 	gb_state->hl = gb.cpu_reg.hl;
+// 	gb_state->sp = gb.cpu_reg.sp;
+// 	gb_state->pc = gb.cpu_reg.pc;
 	
-	gb_state->lcd_count = gb.counter.lcd_count;
-	gb_state->div_count = gb.counter.div_count;
-	gb_state->tima_count = gb.counter.tima_count;
-	gb_state->serial_count = gb.counter.serial_count;
+// 	gb_state->lcd_count = gb.counter.lcd_count;
+// 	gb_state->div_count = gb.counter.div_count;
+// 	gb_state->tima_count = gb.counter.tima_count;
+// 	gb_state->serial_count = gb.counter.serial_count;
 	
-	gb_state->TIMA = gb.gb_reg.TIMA;
-	gb_state->TMA = gb.gb_reg.TMA;
-	gb_state->TAC = gb.gb_reg.TAC;
-	gb_state->DIV = gb.gb_reg.DIV;
+// 	gb_state->TIMA = gb.gb_reg.TIMA;
+// 	gb_state->TMA = gb.gb_reg.TMA;
+// 	gb_state->TAC = gb.gb_reg.TAC;
+// 	gb_state->DIV = gb.gb_reg.DIV;
 	
-	gb_state->IF = gb.gb_reg.IF;
+// 	gb_state->IF = gb.gb_reg.IF;
 	
-	gb_state->LCDC = gb.gb_reg.LCDC;
-	gb_state->SCY = gb.gb_reg.SCY;
-	gb_state->SCX = gb.gb_reg.SCX;
-	gb_state->LYC = gb.gb_reg.LYC;
+// 	gb_state->LCDC = gb.gb_reg.LCDC;
+// 	gb_state->SCY = gb.gb_reg.SCY;
+// 	gb_state->SCX = gb.gb_reg.SCX;
+// 	gb_state->LYC = gb.gb_reg.LYC;
 	
-	gb_state->SC = gb.gb_reg.SC;
-	gb_state->STAT = gb.gb_reg.STAT;
-	gb_state->LY = gb.gb_reg.LY;
+// 	gb_state->SC = gb.gb_reg.SC;
+// 	gb_state->STAT = gb.gb_reg.STAT;
+// 	gb_state->LY = gb.gb_reg.LY;
 	
-	gb_state->WY = gb.gb_reg.WY;
-	gb_state->WX = gb.gb_reg.WX;
-	gb_state->IE = gb.gb_reg.IE;
+// 	gb_state->WY = gb.gb_reg.WY;
+// 	gb_state->WX = gb.gb_reg.WX;
+// 	gb_state->IE = gb.gb_reg.IE;
 	
-	gb_state->joypad = gb.direct.joypad;
-	gb_state->P1 = gb.gb_reg.P1;
+// 	gb_state->joypad = gb.direct.joypad;
+// 	gb_state->P1 = gb.gb_reg.P1;
 
-	memcpy(gb_state->wram, gb.wram, sizeof(gb.wram));
-	memcpy(gb_state->vram, gb.vram, sizeof(gb.vram));
-	memcpy(gb_state->hram, gb.hram, sizeof(gb.hram));
-	memcpy(gb_state->oam, gb.oam, sizeof(gb.oam));
-	memcpy(gb_state->audio_mem, gb.audio_mem, sizeof(gb.audio_mem));
+// 	memcpy(gb_state->wram, gb.wram, sizeof(gb.wram));
+// 	memcpy(gb_state->vram, gb.vram, sizeof(gb.vram));
+// 	memcpy(gb_state->hram, gb.hram, sizeof(gb.hram));
+// 	memcpy(gb_state->oam, gb.oam, sizeof(gb.oam));
+// 	memcpy(gb_state->audio_mem, gb.audio_mem, sizeof(gb.audio_mem));
 
-	// save cart ram
-	if(SAVESTATE_CART_RAM_SIZE > 0)
-		memcpy(&savestate_buffer[SAVESTATE_CART_RAM], priv.cart_ram, SAVESTATE_CART_RAM_SIZE);
+// 	// save cart ram
+// 	if(SAVESTATE_CART_RAM_SIZE > 0)
+// 		memcpy(&savestate_buffer[SAVESTATE_CART_RAM], priv.cart_ram, SAVESTATE_CART_RAM_SIZE);
 
-	// write buffer to a file
-	char rom_name[17];
-	char savestate_path[146] = "\\fls0\\CPBoy\\savestates\\";
+// 	// write buffer to a file
+// 	char rom_name[17];
+// 	char savestate_path[146] = "\\fls0\\CPBoy\\savestates\\";
 
-	gb_get_rom_name(&gb, rom_name);
-	strcat(savestate_path, rom_name);
+// 	gb_get_rom_name(&gb, rom_name);
+// 	strcat(savestate_path, rom_name);
 
-	// make dirs
-	struct stat dstat;
+// 	// make dirs
+// 	struct stat dstat;
 
-	if(stat("\\fls0\\CPBoy", &dstat) != 0)
-		mkdir("\\fls0\\CPBoy");	
+// 	if(stat("\\fls0\\CPBoy", &dstat) != 0)
+// 		mkdir("\\fls0\\CPBoy");	
 		
-	if(stat("\\fls0\\CPBoy\\savestates", &dstat) != 0)
-		mkdir("\\fls0\\CPBoy\\savestates");
+// 	if(stat("\\fls0\\CPBoy\\savestates", &dstat) != 0)
+// 		mkdir("\\fls0\\CPBoy\\savestates");
 
-	if(stat(savestate_path, &dstat) != 0)
-		mkdir(savestate_path);
+// 	if(stat(savestate_path, &dstat) != 0)
+// 		mkdir(savestate_path);
 
-	strcat(savestate_path, "\\");
-	strcat(savestate_path, savestate_name);
-	strcat(savestate_path, ".gbss");
+// 	strcat(savestate_path, "\\");
+// 	strcat(savestate_path, savestate_name);
+// 	strcat(savestate_path, ".gbss");
 
-	// actually write the file
-	int fd = open(savestate_path, OPEN_CREATE | OPEN_WRITE);
+// 	// actually write the file
+// 	int fd = open(savestate_path, OPEN_CREATE | OPEN_WRITE);
 
-	if(fd >= 0)
-	{
-		write(fd, savestate_buffer, SAVESTATE_SIZE);
-		close(fd);
-	}
+// 	if(fd >= 0)
+// 	{
+// 		write(fd, savestate_buffer, SAVESTATE_SIZE);
+// 		close(fd);
+// 	}
 
-	free(savestate_buffer);
-}
+// 	free(savestate_buffer);
+// }
 
-void delete_savestate(struct savestate *savestate)
-{
-	remove(savestate->file);
-}
+// void delete_savestate(struct savestate *savestate)
+// {
+// 	remove(savestate->file);
+// }
 
-void apply_savestate(struct savestate *savestate, uint16_t (*last_frame)[LCD_WIDTH])
-{
-	int fd = open(savestate->file, OPEN_READ);
+// void apply_savestate(struct savestate *savestate, uint16_t (*last_frame)[LCD_WIDTH])
+// {
+// 	int fd = open(savestate->file, OPEN_READ);
 
-	if(fd < 0)
-		return;
+// 	if(fd < 0)
+// 		return;
 
-	uint8_t *savestate_buffer = (uint8_t *)malloc(SAVESTATE_SIZE);
-	struct gb_state *gb_state = (struct gb_state *)&savestate_buffer[SAVESTATE_GB_STATE];
+// 	uint8_t *savestate_buffer = (uint8_t *)malloc(SAVESTATE_SIZE);
+// 	struct gb_state *gb_state = (struct gb_state *)&savestate_buffer[SAVESTATE_GB_STATE];
 
-	read(fd, savestate_buffer, SAVESTATE_SIZE);
-	close(fd);
+// 	read(fd, savestate_buffer, SAVESTATE_SIZE);
+// 	close(fd);
 
-	// apply state
-	gb.gb_halt = gb_state->gb_halt;
-	gb.gb_ime = gb_state->gb_ime;
-#if PEANUT_GB_USE_BIOS
-	gb.gb_bios_enable = gb_state->gb_bios_enable;
-#endif
-	gb.lcd_mode = gb_state->lcd_mode;
+// 	// apply state
+// 	gb.gb_halt = gb_state->gb_halt;
+// 	gb.gb_ime = gb_state->gb_ime;
+// #if PEANUT_GB_USE_BIOS
+// 	gb.gb_bios_enable = gb_state->gb_bios_enable;
+// #endif
+// 	gb.lcd_mode = gb_state->lcd_mode;
 
-	gb.selected_rom_bank = gb_state->selected_rom_bank;
-	gb.cart_ram_bank = gb_state->cart_ram_bank;
-	gb.enable_cart_ram = gb_state->enable_cart_ram;
-	gb.cart_mode_select = gb_state->cart_mode_select;
+// 	gb.selected_rom_bank = gb_state->selected_rom_bank;
+// 	gb.cart_ram_bank = gb_state->cart_ram_bank;
+// 	gb.enable_cart_ram = gb_state->enable_cart_ram;
+// 	gb.cart_mode_select = gb_state->cart_mode_select;
 	
-	gb.cpu_reg.a =  gb_state->a;
-	gb.cpu_reg.f = gb_state->f;
-	gb.cpu_reg.bc = gb_state->bc;
-	gb.cpu_reg.de = gb_state->de;
-	gb.cpu_reg.hl = gb_state->hl;
-	gb.cpu_reg.sp = gb_state->sp;
-	gb.cpu_reg.pc = gb_state->pc;
+// 	gb.cpu_reg.a =  gb_state->a;
+// 	gb.cpu_reg.f = gb_state->f;
+// 	gb.cpu_reg.bc = gb_state->bc;
+// 	gb.cpu_reg.de = gb_state->de;
+// 	gb.cpu_reg.hl = gb_state->hl;
+// 	gb.cpu_reg.sp = gb_state->sp;
+// 	gb.cpu_reg.pc = gb_state->pc;
 
-	gb.counter.lcd_count = gb_state->lcd_count;
-	gb.counter.div_count = gb_state->div_count;
-	gb.counter.tima_count = gb_state->tima_count;
-	gb.counter.serial_count = gb_state->serial_count;
+// 	gb.counter.lcd_count = gb_state->lcd_count;
+// 	gb.counter.div_count = gb_state->div_count;
+// 	gb.counter.tima_count = gb_state->tima_count;
+// 	gb.counter.serial_count = gb_state->serial_count;
 
-	gb.gb_reg.TIMA = gb_state->TIMA;
-	gb.gb_reg.TMA = gb_state->TMA;
-	gb.gb_reg.TAC = gb_state->TAC;
-	gb.gb_reg.DIV = gb_state->DIV;
+// 	gb.gb_reg.TIMA = gb_state->TIMA;
+// 	gb.gb_reg.TMA = gb_state->TMA;
+// 	gb.gb_reg.TAC = gb_state->TAC;
+// 	gb.gb_reg.DIV = gb_state->DIV;
 
-	gb.gb_reg.IF = gb_state->IF;
+// 	gb.gb_reg.IF = gb_state->IF;
 
-	gb.gb_reg.LCDC = gb_state->LCDC;
-	gb.gb_reg.SCY = gb_state->SCY;
-	gb.gb_reg.SCX = gb_state->SCX;
-	gb.gb_reg.LYC = gb_state->LYC;
+// 	gb.gb_reg.LCDC = gb_state->LCDC;
+// 	gb.gb_reg.SCY = gb_state->SCY;
+// 	gb.gb_reg.SCX = gb_state->SCX;
+// 	gb.gb_reg.LYC = gb_state->LYC;
 
-	gb.gb_reg.SC = gb_state->SC;
-	gb.gb_reg.STAT = gb_state->STAT;
-	gb.gb_reg.LY = gb_state->LY;
+// 	gb.gb_reg.SC = gb_state->SC;
+// 	gb.gb_reg.STAT = gb_state->STAT;
+// 	gb.gb_reg.LY = gb_state->LY;
 
-	gb.gb_reg.WY = gb_state->WY;
-	gb.gb_reg.WX = gb_state->WX;
-	gb.gb_reg.IE = gb_state->IE;
+// 	gb.gb_reg.WY = gb_state->WY;
+// 	gb.gb_reg.WX = gb_state->WX;
+// 	gb.gb_reg.IE = gb_state->IE;
 
-	gb.direct.joypad = gb_state->joypad;
-	gb.gb_reg.P1 = gb_state->P1;
+// 	gb.direct.joypad = gb_state->joypad;
+// 	gb.gb_reg.P1 = gb_state->P1;
 
-	memcpy(gb.wram, gb_state->wram, sizeof(gb.wram));
-	memcpy(gb.vram, gb_state->vram, sizeof(gb.vram));
-	memcpy(gb.hram, gb_state->hram, sizeof(gb.hram));
-	memcpy(gb.oam, gb_state->oam, sizeof(gb.oam));
-	memcpy(gb.audio_mem, gb_state->audio_mem, sizeof(gb.audio_mem));
+// 	memcpy(gb.wram, gb_state->wram, sizeof(gb.wram));
+// 	memcpy(gb.vram, gb_state->vram, sizeof(gb.vram));
+// 	memcpy(gb.hram, gb_state->hram, sizeof(gb.hram));
+// 	memcpy(gb.oam, gb_state->oam, sizeof(gb.oam));
+// 	memcpy(gb.audio_mem, gb_state->audio_mem, sizeof(gb.audio_mem));
 
-	// load cart ram
-	if(SAVESTATE_CART_RAM_SIZE > 0)
-		memcpy(priv.cart_ram, &savestate_buffer[SAVESTATE_CART_RAM], SAVESTATE_CART_RAM_SIZE);
+// 	// load cart ram
+// 	if(SAVESTATE_CART_RAM_SIZE > 0)
+// 		memcpy(priv.cart_ram, &savestate_buffer[SAVESTATE_CART_RAM], SAVESTATE_CART_RAM_SIZE);
 
-	load_savestate_preview(savestate);
+// 	load_savestate_preview(savestate);
 
-	memcpy(last_frame, current_preview, LCD_WIDTH * LCD_HEIGHT * 2);
+// 	memcpy(last_frame, current_preview, LCD_WIDTH * LCD_HEIGHT * 2);
 
-	if(current_preview != NULL)
-	{
-		free(current_preview);
-		current_preview = NULL;
-	}
+// 	if(current_preview != NULL)
+// 	{
+// 		free(current_preview);
+// 		current_preview = NULL;
+// 	}
 
-	free(savestate_buffer);
-}
+// 	free(savestate_buffer);
+// }
 
 int8_t save_controls(uint32_t (*controls_ptr)[2])
 {
@@ -3480,7 +3480,7 @@ void gb_error(struct gb_s *gb, const enum gb_error_e gb_err, const uint16_t val)
 		case GB_INVALID_OPCODE:
 			Debug_Printf(0, 0, false, 0, "Invalid opcode %#04x at PC: %#06x, SP: %#06x\n",
 				val,
-				gb->cpu_reg.pc - 1,
+				gb->cpu_reg.pc.reg - 1,
 				gb->cpu_reg.sp);
 	
 			for (uint8_t i = 0; i < 100; i++)
