@@ -13,10 +13,10 @@ CC:=sh4-elf-gcc
 CC_FLAGS:=-ffreestanding -fshort-wchar -Wall -Wextra -O2 -I $(SDK_DIR)/include/ -m4-nofpu
 
 CXX:=sh4-elf-g++
-CXX_FLAGS:=-ffreestanding -fno-exceptions -fno-rtti -fshort-wchar -Wall -Wextra -Wno-write-strings -O2 -I $(SDK_DIR)/include/ -m4-nofpu
+CXX_FLAGS:=-ffreestanding -fno-exceptions -fno-rtti -fshort-wchar -Wall -Wextra -Wno-write-strings -O2 -I $(SDK_DIR)/include/ -m4-nofpu -I $(SDK_DIR)/newlib/sh-elf/include
 
-LD:=sh4-elf-ld
-LD_FLAGS:=-nostdlib --no-undefined
+LD:=sh4-elf-gcc
+LD_FLAGS:=-nostartfiles -m4-nofpu -Wno-undef -L$(SDK_DIR)/newlib/sh-elf/lib
 
 READELF:=sh4-elf-readelf
 OBJCOPY:=sh4-elf-objcopy
@@ -49,7 +49,7 @@ $(APP_ELF): $(OBJECTS) $(SDK_DIR)/sdk.o linker.ld
 	$(OBJCOPY) --set-section-flags .hollyhock_version=contents,strings,readonly $(APP_ELF) $(APP_ELF)
 
 $(APP_BIN): $(OBJECTS) $(SDK_DIR)/sdk.o linker.ld
-	$(LD) --oformat binary -T linker.ld -o $@ $(LD_FLAGS) $(OBJECTS) $(SDK_DIR)/sdk.o
+	$(LD) -Wl,--oformat=binary -T linker.ld -o $@ $(LD_FLAGS) $(OBJECTS) $(SDK_DIR)/sdk.o
 
 # We're not actually building sdk.o, just telling the user they need to do it
 # themselves. Just using the target to trigger an error when the file is
