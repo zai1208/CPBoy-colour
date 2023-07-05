@@ -27,8 +27,6 @@ To load your Gameboy ROM, create a directory named "roms" and copy it to that di
 
 **MISC:**
  - (-): Exit emulator
- - KEYBOARD: Toggle frameskipping (When enabled, only render every second frame, which speeds up the emulator a bit but lowers its FPS)
- - BACKSPACE: Enable Interlacing (When enabled, only render every second line and switch every frame, which speeds up the emulator a bit but makes visuals worse)
 
 ## Games That Don't Work
 

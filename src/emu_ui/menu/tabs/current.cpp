@@ -1,0 +1,413 @@
+#include "current.h"
+
+#include <stdlib.h>
+#include <string.h>
+#include "../menu.h"
+#include "../../components.h"
+#include "../../colors.h"
+#include "../../font.h"
+#include "../../effects.h"
+#include "../../input.h"
+#include "../../../core/error.h"
+#include "../../../helpers/macros.h"
+#include "../../../helpers/functions.h"
+
+namespace hhk 
+{
+  #include <sdk/os/mem.hpp>
+}
+
+#define TAB_CURRENT_TITLE         "Current"
+
+#define TAB_CUR_ITEM_COUNT              4
+#define TAB_CUR_ITEM_FRAMESKIP_INDEX    0
+#define TAB_CUR_ITEM_FRAMESKIP_TITLE    "Frameskipping"
+#define TAB_CUR_ITEM_FRAMESKIP_SUBTITLE "Skips rendering and LCD-Refresh"
+#define TAB_CUR_ITEM_INTERL_INDEX       1
+#define TAB_CUR_ITEM_INTERL_TITLE       "Interlacing"
+#define TAB_CUR_ITEM_PALETTE_INDEX      2
+#define TAB_CUR_ITEM_PALETTE_TITLE      "Color Palette"
+#define TAB_CUR_ITEM_PALETTE_SUBTITLE   "Select palette for this ROM"
+#define TAB_CUR_ITEM_QUIT_INDEX         3
+#define TAB_CUR_ITEM_QUIT_TITLE         "Quit CPBoy"
+
+#define DIALOG_FRAMESKIP_ITEM_COUNT   3
+#define DIALOG_FRAMESKIP_WIDTH        200
+#define DIALOG_FRAMESKIP_HEIGHT       DEBUG_LINE_HEIGHT * DIALOG_FRAMESKIP_ITEM_COUNT + ALERT_CONTENT_OFFSET_Y + (4 * STD_CONTENT_OFFSET)
+#define DIALOG_PALETTE_WIDTH          200
+
+void draw_frameskip_alert(emu_preferences *preferences, uint8_t selected_item)
+{
+  uint32_t position = draw_alert_box(
+    TAB_CUR_ITEM_FRAMESKIP_TITLE,
+    TAB_CUR_ITEM_FRAMESKIP_SUBTITLE,
+    DIALOG_FRAMESKIP_WIDTH,
+    DIALOG_FRAMESKIP_HEIGHT,
+    COLOR_MENU_BG, 
+    COLOR_PRIMARY
+  );
+
+  char tmp[4];
+
+  const uint16_t dialog_x = ALERT_GET_X(position);
+  const uint16_t dialog_y = ALERT_GET_Y(position);
+
+  const uint16_t slider_offset = ALERT_CONTENT_OFFSET_X + (7 * DEBUG_CHAR_WIDTH);
+  const uint16_t slider_width = DIALOG_FRAMESKIP_WIDTH - slider_offset - 
+    (4 * DEBUG_CHAR_WIDTH) - STD_CONTENT_OFFSET;
+
+  // Draw frameskip enabled state 
+  print_string_centered(
+    (preferences->config.frameskip_enabled)? "Enabled" : "Disabled", 
+    dialog_x, 
+    dialog_y + ALERT_CONTENT_OFFSET_Y, 
+    DIALOG_FRAMESKIP_WIDTH,
+    0, 
+    (preferences->config.frameskip_enabled)? COLOR_SUCCESS : COLOR_DANGER, 
+    (selected_item == 0) ? COLOR_SELECTED : COLOR_BLACK,
+    true
+  );	
+
+  // Draw amount slider
+  print_string(
+    "Frames", 
+    dialog_x + ALERT_CONTENT_OFFSET_X, 
+    dialog_y + ALERT_CONTENT_OFFSET_Y + DEBUG_LINE_HEIGHT + STD_CONTENT_OFFSET, 
+    0, 
+    COLOR_WHITE, 
+    COLOR_BLACK,
+    true 
+  );
+  
+  draw_slider(
+    dialog_x + slider_offset, 
+    dialog_y + ALERT_CONTENT_OFFSET_Y + DEBUG_LINE_HEIGHT + STD_CONTENT_OFFSET, 
+    slider_width, 
+    SLIDER_STD_TRACK_COLOR, 
+    (selected_item == 1) ? COLOR_PRIMARY : COLOR_WHITE, 
+    FRAMESKIP_MIN, 
+    FRAMESKIP_MAX, 
+    preferences->config.frameskip_amount
+  );
+
+  print_string_centered(
+    itoa(preferences->config.frameskip_amount, tmp, 10),
+    dialog_x + slider_offset + slider_width + STD_CONTENT_OFFSET + STD_CONTENT_OFFSET,
+    dialog_y + ALERT_CONTENT_OFFSET_Y + DEBUG_LINE_HEIGHT + STD_CONTENT_OFFSET,
+    (DEBUG_CHAR_WIDTH - 2) * 4,
+    0,
+    COLOR_WHITE,
+    COLOR_BLACK,
+    true
+  );
+
+  // Print ok button  
+  print_string_centered(
+    "OK",
+    dialog_x + ALERT_CONTENT_OFFSET_X,
+    dialog_y + ALERT_CONTENT_OFFSET_Y + (2 * DEBUG_LINE_HEIGHT) + (3 * STD_CONTENT_OFFSET),
+    DIALOG_FRAMESKIP_WIDTH - (2 * ALERT_CONTENT_OFFSET_X),
+    0,
+    COLOR_WHITE,
+    (selected_item == 2)? COLOR_SELECTED : COLOR_BLACK,
+    true
+  );
+}
+
+void draw_palette_selection_alert(emu_preferences *preferences, uint8_t selected_item)
+{
+  uint16_t dialog_height = ALERT_CONTENT_OFFSET_Y + (preferences->palette_count * DEBUG_LINE_HEIGHT) + STD_CONTENT_OFFSET;
+
+  uint32_t position = draw_alert_box(
+    TAB_CUR_ITEM_PALETTE_TITLE,
+    TAB_CUR_ITEM_PALETTE_SUBTITLE,
+    DIALOG_PALETTE_WIDTH,
+    dialog_height,
+    COLOR_MENU_BG, 
+    COLOR_PRIMARY
+  );
+
+  const uint16_t dialog_x = ALERT_GET_X(position);
+  const uint16_t dialog_y = ALERT_GET_Y(position);
+  
+  // Draw every palette
+  for (uint8_t i = 0; i < preferences->palette_count; i++)
+  {
+    print_string_centered(
+      preferences->palettes[i].name,
+      dialog_x + ALERT_CONTENT_OFFSET_X,
+      dialog_y + ALERT_CONTENT_OFFSET_Y + (i * DEBUG_LINE_HEIGHT),
+      DIALOG_PALETTE_WIDTH - (2 * ALERT_CONTENT_OFFSET_X),
+      0,
+      COLOR_WHITE,
+      (selected_item == i)? COLOR_SELECTED : COLOR_BLACK,
+      true
+    );
+  }
+}
+
+int32_t frameskip_alert(struct gb_s *gb)
+{
+  emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
+  
+  // Backup LCD and darken background
+  uint16_t *lcd_backup = (uint16_t *)hhk::malloc(CAS_LCD_HEIGHT * CAS_LCD_WIDTH * sizeof(uint16_t));
+
+  if (lcd_backup)
+  {
+    memcpy(lcd_backup, vram, CAS_LCD_HEIGHT * CAS_LCD_WIDTH * sizeof(uint16_t));
+    darken_screen_area(0, 0, CAS_LCD_WIDTH, CAS_LCD_HEIGHT);
+  }
+
+  bool frameskip_enabled = preferences->config.frameskip_enabled;
+  uint8_t frameskip_amount = preferences->config.frameskip_amount;
+
+  uint8_t selected_item = 0;
+
+  // Create horizontal items count
+  static const uint8_t h_items_count[DIALOG_FRAMESKIP_ITEM_COUNT] = { 1, FRAMESKIP_MAX, 1 };
+
+  // Create horizontal items pointer
+  uint8_t *selected_h_items[DIALOG_FRAMESKIP_ITEM_COUNT] = { nullptr, &frameskip_amount, nullptr };
+
+  // Rendering and input handling
+  for (;;) 
+  {
+    draw_frameskip_alert(preferences, selected_item);
+
+    // Check if OK button or toggle was pressed
+    if (
+      process_input(
+        selected_h_items, 
+        &selected_item, 
+        h_items_count, 
+        DIALOG_FRAMESKIP_ITEM_COUNT, 
+        nullptr,
+        false
+      ) == INPUT_PROC_EXECUTE
+    )
+    {
+      if (selected_item == 0) 
+      {
+        TOGGLE(frameskip_enabled);
+      }
+      else if (selected_item == 2)
+      {
+        break;
+      }
+    }
+
+    // Apply frameskip to emulator    
+    set_frameskip(gb, frameskip_enabled, frameskip_amount);
+
+    LCD_Refresh();
+  }
+  
+  // Close alert
+  if (lcd_backup)
+  {
+    memcpy(vram, lcd_backup, CAS_LCD_HEIGHT * CAS_LCD_WIDTH * sizeof(uint16_t));
+    hhk::free(lcd_backup);
+  }
+
+  return 0;
+}
+
+int32_t palette_selection_alert(struct gb_s *gb)
+{
+  emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
+  
+  // Backup LCD and darken background
+  uint16_t *lcd_backup = (uint16_t *)hhk::malloc(CAS_LCD_HEIGHT * CAS_LCD_WIDTH * sizeof(uint16_t));
+
+  if (lcd_backup)
+  {
+    memcpy(lcd_backup, vram, CAS_LCD_HEIGHT * CAS_LCD_WIDTH * sizeof(uint16_t));
+    darken_screen_area(0, 0, CAS_LCD_WIDTH, CAS_LCD_HEIGHT);
+  }
+
+  uint8_t selected_item = 0;
+
+  // Create horizontal item count array
+  uint8_t h_items_count[preferences->palette_count];
+
+  for (uint8_t i = 0; i < preferences->palette_count; i++)
+  {
+    h_items_count[i] = 1;
+  }
+
+  // Create horizontal items pointer array
+  uint8_t *selected_h_items[preferences->palette_count];
+
+  for (uint8_t i = 0; i < preferences->palette_count; i++)
+  {
+    selected_h_items[i] = nullptr;
+  }
+
+  // Rendering and input handling
+  for (;;) 
+  {
+    draw_palette_selection_alert(preferences, selected_item);
+
+    // Check if palette was selected
+    if (
+      process_input(
+        selected_h_items, 
+        &selected_item, 
+        h_items_count, 
+        preferences->palette_count, 
+        nullptr,
+        false
+      ) == INPUT_PROC_EXECUTE
+    )
+    {
+      preferences->config.selected_palette = selected_item;
+      break;
+    }
+    
+    LCD_Refresh();
+  }
+
+  // Close alert
+  if (lcd_backup)
+  {
+    memcpy(vram, lcd_backup, CAS_LCD_HEIGHT * CAS_LCD_WIDTH * sizeof(uint16_t));
+    hhk::free(lcd_backup);
+  }
+
+  return 0;
+}
+
+int32_t action_frameskip_selection(menu_item *item, gb_s *gb)
+{
+  emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
+  int32_t return_code = frameskip_alert(gb);
+
+  // Update item value text and color
+  strlcpy(item->value, (preferences->config.frameskip_enabled)? "Enabled (" : "Disabled", sizeof(item->value));
+  item->value_color = (preferences->config.frameskip_enabled)? COLOR_SUCCESS : COLOR_DANGER;
+
+  // Append number of frames to skip when enabled
+  if (preferences->config.frameskip_enabled)
+  {
+    char tmp[4];
+
+    strlcat(item->value, itoa(preferences->config.frameskip_amount, tmp, 10), sizeof(item->value));
+    strlcat(item->value, ")", sizeof(item->value));
+  }
+
+  return return_code; 
+}
+
+int32_t action_interlacing_selection(menu_item *item, gb_s *gb)
+{
+  emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
+
+  // Toggle interlacing
+  set_interlacing(gb, !preferences->config.interlacing_enabled);
+
+  // Update item value text and color
+  strlcpy(item->value, (preferences->config.interlacing_enabled)? "Enabled" : "Disabled", sizeof(item->value));
+  item->value_color = (preferences->config.interlacing_enabled)? COLOR_SUCCESS : COLOR_DANGER;
+
+  return 0;
+}
+
+int32_t action_palette_selection(menu_item *item, gb_s *gb)
+{
+  emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
+
+  uint8_t ret = palette_selection_alert(gb);
+
+  // Update item value
+  strlcpy(item->value, preferences->palettes[preferences->config.selected_palette].name, sizeof(item->value));
+
+  return ret;
+}
+
+int32_t action_quit_emulator(menu_item *item, gb_s *gb)
+{
+  return MENU_EMU_QUIT;
+}
+
+menu_tab *prepare_tab_current(menu_tab *tab, emu_preferences *preferences)
+{
+  char filename[TAB_DESCR_MAX_FILENAME_LENGTH + 1];
+
+  // Description and title for "Settings" tab
+  strlcpy(tab->title, TAB_CURRENT_TITLE, sizeof(tab->title));
+  strlcpy(tab->description, "Current ROM: ", sizeof(tab->description));
+  strlcat(tab->description, preferences->current_rom_name, sizeof(tab->description));
+  strlcat(tab->description, "\nFilename: ", sizeof(tab->description));
+  
+  // If filename is too long, copy only first TAB_DESCR_MAX_FILENAME_LENGTH chars
+  if (strlen(preferences->current_filename) > TAB_DESCR_MAX_FILENAME_LENGTH)
+  { 
+    strlcpy(filename, preferences->current_filename, TAB_DESCR_MAX_FILENAME_LENGTH - 4);
+    strlcat(filename, " ...", sizeof(filename));
+  }
+  else 
+  {
+    strlcpy(filename, preferences->current_filename, sizeof(filename));
+  }
+
+  strlcat(tab->description, filename, sizeof(tab->description));
+
+  tab->item_count = TAB_CUR_ITEM_COUNT;
+  tab->items = (menu_item *)hhk::malloc(TAB_CUR_ITEM_COUNT * sizeof(menu_item));
+
+  if (!tab->items) 
+  {
+    set_error(EMALLOC);
+    return nullptr;
+  }
+
+  // Disabled state for each item
+  tab->items[TAB_CUR_ITEM_FRAMESKIP_INDEX].disabled = false;
+  tab->items[TAB_CUR_ITEM_INTERL_INDEX].disabled = false;
+  tab->items[TAB_CUR_ITEM_PALETTE_INDEX].disabled = false;
+  tab->items[TAB_CUR_ITEM_QUIT_INDEX].disabled = false;
+
+  // Title for each item
+  strlcpy(tab->items[TAB_CUR_ITEM_FRAMESKIP_INDEX].title, TAB_CUR_ITEM_FRAMESKIP_TITLE, sizeof(tab->items[TAB_CUR_ITEM_FRAMESKIP_INDEX].title));
+  strlcpy(tab->items[TAB_CUR_ITEM_INTERL_INDEX].title, TAB_CUR_ITEM_INTERL_TITLE, sizeof(tab->items[TAB_CUR_ITEM_INTERL_INDEX].title));
+  strlcpy(tab->items[TAB_CUR_ITEM_PALETTE_INDEX].title, TAB_CUR_ITEM_PALETTE_TITLE, sizeof(tab->items[TAB_CUR_ITEM_PALETTE_INDEX].title));
+  strlcpy(tab->items[TAB_CUR_ITEM_QUIT_INDEX].title, TAB_CUR_ITEM_QUIT_TITLE, sizeof(tab->items[TAB_CUR_ITEM_QUIT_INDEX].title));
+
+  // Value for each item
+  strlcpy(tab->items[TAB_CUR_ITEM_FRAMESKIP_INDEX].value, 
+    (preferences->config.frameskip_enabled)? "Enabled (" : "Disabled", 
+    sizeof(tab->items[TAB_CUR_ITEM_FRAMESKIP_INDEX].value));
+
+  if (preferences->config.frameskip_enabled) 
+  {
+    char tmp[4];
+
+    itoa(preferences->config.frameskip_amount, tmp, 10);
+    strlcat(tab->items[TAB_CUR_ITEM_FRAMESKIP_INDEX].value, tmp, sizeof(tab->items[TAB_CUR_ITEM_FRAMESKIP_INDEX].value));
+    strlcat(tab->items[TAB_CUR_ITEM_FRAMESKIP_INDEX].value, ")", sizeof(tab->items[TAB_CUR_ITEM_FRAMESKIP_INDEX].value));
+  }
+
+  strlcpy(tab->items[TAB_CUR_ITEM_INTERL_INDEX].value, 
+    (preferences->config.interlacing_enabled)? "Enabled" : "Disabled",
+    sizeof(tab->items[TAB_CUR_ITEM_INTERL_INDEX].value));
+  strlcpy(tab->items[TAB_CUR_ITEM_PALETTE_INDEX].value, 
+    preferences->palettes[preferences->config.selected_palette].name,
+    sizeof(tab->items[TAB_CUR_ITEM_INTERL_INDEX].value));
+  tab->items[TAB_CUR_ITEM_QUIT_INDEX].value[0] = '\0';
+  
+  // Value color for each item
+  tab->items[TAB_CUR_ITEM_FRAMESKIP_INDEX].value_color = 
+    (preferences->config.frameskip_enabled)? COLOR_SUCCESS : COLOR_DANGER;
+  tab->items[TAB_CUR_ITEM_INTERL_INDEX].value_color = 
+    (preferences->config.interlacing_enabled)? COLOR_SUCCESS : COLOR_DANGER;
+  tab->items[TAB_CUR_ITEM_PALETTE_INDEX].value_color = COLOR_SUCCESS;
+
+  // Action for each item
+  tab->items[TAB_CUR_ITEM_FRAMESKIP_INDEX].action = action_frameskip_selection;
+  tab->items[TAB_CUR_ITEM_INTERL_INDEX].action = action_interlacing_selection;
+  tab->items[TAB_CUR_ITEM_PALETTE_INDEX].action = action_palette_selection;
+  tab->items[TAB_CUR_ITEM_QUIT_INDEX].action = action_quit_emulator;
+
+  return tab;
+}

@@ -9,3 +9,6 @@ tags
 obj
 *.hhk
 *.bin
+
+# OS items
+.DS_Store
