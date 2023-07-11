@@ -307,7 +307,7 @@ uint8_t execute_rom(struct gb_s *gb)
 
     // Update screen with current frame data
     // Only refresh actual gameboy screen
-    lcd_refresh_partial(0, CAS_LCD_WIDTH, 0, LCD_HEIGHT * 2);
+    refresh_gb_lcd(0, CAS_LCD_WIDTH, 0, LCD_HEIGHT * 2);
   }
 }
 

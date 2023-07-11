@@ -37,10 +37,6 @@ APP_VERSION(CPBOY_VERSION)
 gb_s main_gb;
 emu_preferences main_preferences;
 
-void draw_load_alert(void);
-uint8_t run_emulator(struct gb_s *gb, emu_preferences *prefs);
-uint8_t load_rom(emu_preferences *prefs);
-
 extern "C" 
 int32_t main() 
 {
