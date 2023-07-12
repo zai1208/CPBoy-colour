@@ -217,15 +217,6 @@ char *generate_palette_name(char *str_buffer, struct gb_s *gb)
   return str_buffer;
 }
 
-char *get_palette_filename(char *str_buffer, palette *pal) 
-{
-  strcpy(str_buffer, DIRECTORY_PALETTES "\\");
-  strcat(str_buffer, pal->name);
-  strcat(str_buffer, EXTENSION_PALETTE);
-
-  return str_buffer;
-}
-
 uint8_t process_palette_ini(char *ini_string, uint32_t len, palette *pal)
 {
   ini_file file;

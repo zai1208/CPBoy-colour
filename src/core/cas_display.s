@@ -1,6 +1,6 @@
 ! Assembly function to partially refresh GB-LCD
 ! (Credits to @DasHeiligeDoenerhuhn)
-.global _gb_lcd_refresh
+.global _refresh_gb_lcd
 
 .align 2
 _refresh_gb_lcd:

@@ -10,15 +10,6 @@
 
 #define RAM_VAR_CONSTANT  "R_"
 
-// Gets the filename of the current roms cart ram save
-// Make sure the buffer is big enough
-void get_cart_ram_file_name(emu_preferences *preferences, char *name_buffer)
-{	
-  strcpy(name_buffer, DIRECTORY_CARTRAM "\\");
-	strcat(name_buffer, preferences->current_rom_name);	
-	strcat(name_buffer, EXTENSION_CARTRAM);
-}
-
 // Gets the mcs varname of the current roms cart ram save
 // Make sure the buffer is big enough
 char *get_cart_ram_var_name(emu_preferences *preferences, char *name_buffer)
@@ -42,9 +33,10 @@ char *get_cart_ram_var_name(emu_preferences *preferences, char *name_buffer)
   return name_buffer;
 }
 
-uint8_t load_cart_ram(struct gb_s *gb, size_t len)
+uint8_t load_cart_ram(struct gb_s *gb)
 {
   emu_preferences *preferences = (emu_preferences *)(gb->direct.priv);
+  size_t len = gb_get_save_size(gb);
 
 	// If save file not required.
 	if (len == 0)
@@ -94,9 +86,10 @@ uint8_t load_cart_ram(struct gb_s *gb, size_t len)
   return 0;	
 }
 
-uint8_t save_cart_ram(struct gb_s *gb, size_t len)
+uint8_t save_cart_ram(struct gb_s *gb)
 {
   emu_preferences *preferences = (emu_preferences *)(gb->direct.priv);
+  size_t len = gb_get_save_size(gb);
 
   // Current ROM does not have a cart ram
 	if(len == 0 || !(preferences->cart_ram))

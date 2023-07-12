@@ -19,15 +19,6 @@
 #define CONFIG_INI_FRAMESKIP_AMOUNT_KEY "fs_am"
 #define CONFIG_INI_SELECTED_PALETTE_KEY "sel_pal"
 
-char *get_rom_config_file_name(emu_preferences *preferences, char *name_buffer)
-{
-	strcpy(name_buffer, DIRECTORY_CONFIGS "\\");
-	strcat(name_buffer, preferences->current_rom_name);	
-	strcat(name_buffer, EXTENSION_CONFIG);
-
-  return name_buffer;
-}
-
 char *get_rom_config_var_name(emu_preferences *preferences, char *name_buffer)
 {
   char *str = preferences->current_rom_name;

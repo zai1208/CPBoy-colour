@@ -209,7 +209,7 @@ uint8_t prepare_emulator(struct gb_s *gb, emu_preferences *preferences)
   gb_init_lcd(gb, &lcd_draw_line);
 
   // Load cart save
-  load_cart_ram(gb, gb_get_save_size(gb));
+  load_cart_ram(gb);
 
   // Load user configs
   load_rom_config(gb);
@@ -247,7 +247,7 @@ void free_emulator(struct gb_s *gb)
 uint8_t close_rom(struct gb_s *gb)
 {
   emu_preferences *prefs = (emu_preferences *)gb->direct.priv;
-  uint8_t return_code = save_cart_ram(gb, gb_get_save_size(gb));
+  uint8_t return_code = save_cart_ram(gb);
 
   if (prefs->file_states.rom_config_changed)
   {
