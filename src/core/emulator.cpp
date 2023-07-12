@@ -99,16 +99,18 @@ void lcd_draw_line(struct gb_s *gb, const uint8_t pixels[160],
   emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
   palette selected_palette = preferences->palettes[preferences->config.selected_palette];
 
+  const uint16_t offset = line * (LCD_WIDTH * 4);
+
   for(uint16_t x = 0; x < LCD_WIDTH; x++)
   {
     uint16_t color = selected_palette.data
       [(pixels[x] & LCD_PALETTE_ALL) >> 4]
       [pixels[x] & 3];
 
-    vram[(line * (LCD_WIDTH * 4)) + (x * 2)] = color;
-    vram[(line * (LCD_WIDTH * 4)) + (x * 2) + 1] = color;
-    vram[(line * (LCD_WIDTH * 4)) + (LCD_WIDTH * 2) + (x * 2)] = color;
-    vram[(line * (LCD_WIDTH * 4)) + (LCD_WIDTH * 2) + (x * 2) + 1] = color;
+    vram[offset + (x * 2)] = color;
+    vram[offset + (x * 2) + 1] = color;
+    vram[offset + (LCD_WIDTH * 2) + (x * 2)] = color;
+    vram[offset + (LCD_WIDTH * 2) + (x * 2) + 1] = color;
   }
 }
 
