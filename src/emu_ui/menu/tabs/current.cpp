@@ -27,7 +27,7 @@ namespace hhk
 #define TAB_CUR_ITEM_INTERL_TITLE       "Interlacing"
 #define TAB_CUR_ITEM_PALETTE_INDEX      1
 #define TAB_CUR_ITEM_PALETTE_TITLE      "Color Palette"
-#define TAB_CUR_ITEM_PALETTE_SUBTITLE   "Select palette for this ROM"
+#define TAB_CUR_ITEM_PALETTE_SUBTITLE   "Select a palette for this ROM"
 #define TAB_CUR_ITEM_QUIT_INDEX         2
 #define TAB_CUR_ITEM_QUIT_TITLE         "Quit CPBoy"
 
@@ -261,6 +261,13 @@ int32_t palette_selection_alert(struct gb_s *gb)
       ) == INPUT_PROC_EXECUTE
     )
     {
+      // Do not do anything if the same palette is selected
+      if (preferences->config.selected_palette == selected_item)
+      {
+        break;
+      }
+
+      preferences->file_states.rom_config_changed = true;
       preferences->config.selected_palette = selected_item;
       break;
     }
