@@ -16,18 +16,8 @@
 
 #define DIRECTORY_MAIN     "\\fls0\\CPBoy\\"
 #define DIRECTORY_ROM      DIRECTORY_MAIN "roms"
-#define DIRECTORY_CONFIGS  DIRECTORY_MAIN "configs"
-#define DIRECTORY_CARTRAM  DIRECTORY_MAIN "cartrams"
-#define DIRECTORY_PALETTES DIRECTORY_MAIN "palettes"
-
-#define FILENAME_CONTROLS "controls.ccon"
 
 #define EXTENSION_ROM     ".gb"
-#define EXTENSION_CARTRAM ".csav"
-#define EXTENSION_CONFIG  ".ini"
-#define EXTENSION_PALETTE ".gbcp"
-
-#define FILESIZE_CONFIG sizeof(rom_config)
 
 #define TOGGLE(value) ((value) = !(value))
 
