@@ -19,6 +19,8 @@ namespace hhk
 
 #define TAB_SAVES_TITLE           "Saves"
 
+int32_t dummy_function(menu_item *item, gb_s *gb) { return 0; }
+
 menu_tab *prepare_tab_saves(menu_tab *tab, emu_preferences *preferences)
 {
   // Description for "Saves" tab
@@ -37,6 +39,7 @@ menu_tab *prepare_tab_saves(menu_tab *tab, emu_preferences *preferences)
   tab->items[0].disabled = false;
   strcpy(tab->items[0].title, "DUMMY");
   tab->items[0].value[0] = '\0';
+  tab->items[0].action = dummy_function;
 
   return tab;
 }

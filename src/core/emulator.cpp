@@ -63,13 +63,18 @@ void set_frameskip(struct gb_s *gb, bool enabled, uint8_t amount)
   uint8_t new_amount = clamp(amount, (uint8_t)FRAMESKIP_MIN, (uint8_t)FRAMESKIP_MAX);
 
   // Check if anything should be changed
-  if (enabled == preferences->config.frameskip_enabled && new_amount == preferences->config.frameskip_amount)
+  if (
+    enabled == preferences->config.frameskip_enabled 
+    && new_amount == preferences->config.frameskip_amount
+    && enabled == gb->direct.frame_skip 
+    && new_amount == (gb->direct.frame_skip_amount + 1) 
+  )
   {
     return;
   }
 
   gb->direct.frame_skip = enabled;
-  gb->direct.frame_skip_amount = new_amount;
+  gb->direct.frame_skip_amount = (new_amount + 1);
   preferences->config.frameskip_enabled = enabled;
   preferences->config.frameskip_amount = new_amount;    
 
@@ -81,7 +86,10 @@ void set_interlacing(struct gb_s *gb, bool enabled)
   emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
 
   // Check if anything should be changed
-  if (enabled == preferences->config.interlacing_enabled)
+  if (
+    enabled == preferences->config.interlacing_enabled
+    && enabled == gb->direct.interlace
+  )
   {
     return;
   }
@@ -98,19 +106,38 @@ void lcd_draw_line(struct gb_s *gb, const uint8_t pixels[160],
 {
   emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
   palette selected_palette = preferences->palettes[preferences->config.selected_palette];
+  uint32_t *ssdr = (uint32_t *)SERIAL_SCREEN_DATA_REGISTER;
 
-  const uint16_t offset = line * (LCD_WIDTH * 4);
-
-  for(uint16_t x = 0; x < LCD_WIDTH; x++)
+  // When emulator will be paused, render a full frame in vram
+  if (preferences->emulator_paused)
   {
-    uint16_t color = selected_palette.data
-      [(pixels[x] & LCD_PALETTE_ALL) >> 4]
-      [pixels[x] & 3];
+    const uint32_t offset = line * (LCD_WIDTH * 4);
 
-    vram[offset + (x * 2)] = color;
-    vram[offset + (x * 2) + 1] = color;
-    vram[offset + (LCD_WIDTH * 2) + (x * 2)] = color;
-    vram[offset + (LCD_WIDTH * 2) + (x * 2) + 1] = color;
+    for(uint16_t x = 0; x < LCD_WIDTH; x++)
+    {
+      uint16_t color = selected_palette.data
+        [(pixels[x] & LCD_PALETTE_ALL) >> 4]
+        [pixels[x] & 3];
+
+      vram[offset + (x * 2)] = color;
+      vram[offset + (x * 2) + 1] = color;
+      vram[offset + (LCD_WIDTH * 2) + (x * 2)] = color;
+      vram[offset + (LCD_WIDTH * 2) + (x * 2) + 1] = color;
+    }
+
+    return;
+  }
+
+  for (uint8_t i = 0; i < 2; i++) 
+  {
+    for(uint16_t x = 0; x < LCD_WIDTH; x++)
+    {
+      uint16_t color = selected_palette.data
+        [(pixels[x] & LCD_PALETTE_ALL) >> 4]
+        [pixels[x] & 3];
+
+      *ssdr = color | (color << 16);
+    }
   }
 }
 
@@ -234,6 +261,9 @@ uint8_t prepare_emulator(struct gb_s *gb, emu_preferences *preferences)
     preferences->config.selected_palette = 0;
   }
 
+  // Set default flags
+  preferences->emulator_paused = false;
+
   return 0;
 }
 
@@ -264,24 +294,40 @@ uint8_t close_rom(struct gb_s *gb)
 uint8_t execute_rom(struct gb_s *gb) 
 {
   emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
-  uint32_t frame = 0;
-  uint8_t frames_skipped = 0;
+  bool refreshed_lcd = false;
 
   for (;;)
   {
-    frame++;
-
     // Handle rtc
-    if (frame % 24 == 0)
+    if (gb->display.frame_count % 24 == 0)
     {
       gb_tick_rtc(gb);
+    }
+
+    // Check if display should be updated
+    if(gb->direct.frame_skip)
+    {
+      if ((gb->display.frame_count % gb->direct.frame_skip_amount) == 0)
+      {
+        prepare_lcd();
+        refreshed_lcd = true;
+      }
+      else
+      {
+        refreshed_lcd = false;
+      }
+    }
+    else
+    {
+      prepare_lcd();
+      refreshed_lcd = true;
     }
 
     // Run CPU until next frame
     gb_run_frame(gb);
 
-    // Handle input
-    if (execution_handle_input(gb) == INPUT_OPEN_MENU)
+    // Check if pause menu should be displayed
+    if (preferences->emulator_paused && refreshed_lcd)
     {
       uint8_t menu_code = emulation_menu(gb, false);
 
@@ -290,26 +336,17 @@ uint8_t execute_rom(struct gb_s *gb)
         return menu_code;
       }
 
+      preferences->emulator_paused = false;
+
       LCD_Refresh();
     }
 
-    // Check if display should be updated
-    if(gb->direct.frame_skip)
+    // Handle input
+    if (execution_handle_input(gb) == INPUT_OPEN_MENU)
     {
-      if (frames_skipped < preferences->config.frameskip_amount)
-      {
-        frames_skipped++;
-        continue;
-      }
-      else 
-      {
-        frames_skipped = 0;
-      }
+      // Do not actually open the menu, but render another frame for gb preview first
+      preferences->emulator_paused = true;
     }
-
-    // Update screen with current frame data
-    // Only refresh actual gameboy screen
-    refresh_gb_lcd(0, CAS_LCD_WIDTH, 0, LCD_HEIGHT * 2);
   }
 }
 

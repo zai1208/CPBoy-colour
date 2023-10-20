@@ -1018,7 +1018,7 @@ void __gb_draw_line(struct gb_s *gb)
 	if(gb->display.lcd_draw_line == NULL)
 		return;
 
-	if(gb->direct.frame_skip && !gb->display.frame_skip_count)
+	if(gb->direct.frame_skip && (gb->display.frame_count % gb->direct.frame_skip_amount) != 0)
 		return;
 
 	/* If interlaced mode is activated, check if we need to draw the current
@@ -2973,22 +2973,18 @@ void __gb_step_cpu(struct gb_s *gb)
 
 				/* If frame skip is activated, check if we need to draw
 				 * the frame or skip it. */
-				if(gb->direct.frame_skip)
-				{
-					gb->display.frame_skip_count =
-						!gb->display.frame_skip_count;
-				}
+        gb->display.frame_count++;
 
 				/* If interlaced is activated, change which lines get
 				 * updated. Also, only update lines on frames that are
 				 * actually drawn when frame skip is enabled. */
-				if(gb->direct.interlace &&
-					(!gb->direct.frame_skip ||
-						gb->display.frame_skip_count))
-				{
-					gb->display.interlace_count =
-						!gb->display.interlace_count;
-				}
+				// if(gb->direct.interlace &&
+				// 	(!gb->direct.frame_skip ||
+				// 		gb->display.frame_skip_count))
+				// {
+				// 	gb->display.interlace_count =
+				// 		!gb->display.interlace_count;
+				// }
 #endif
 			}
 				/* Normal Line */
@@ -3284,7 +3280,7 @@ void gb_init_lcd(struct gb_s *gb,
 	gb->direct.interlace = 0;
 	gb->display.interlace_count = 0;
 	gb->direct.frame_skip = 0;
-	gb->display.frame_skip_count = 0;
+	gb->display.frame_count = 0;
 
 	gb->display.window_clear = 0;
 	gb->display.WY = 0;

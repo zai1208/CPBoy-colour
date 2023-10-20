@@ -598,8 +598,8 @@ struct gb_s
 		uint8_t window_clear;
 		uint8_t WY;
 
-		/* Only support 30fps frame skip. */
-		unsigned frame_skip_count : 1;
+		uint32_t frame_count;
+    
 		unsigned interlace_count : 1;
 	} display;
 
@@ -612,9 +612,6 @@ struct gb_s
 	 */
 	struct
 	{
-		/* Set to enable interlacing. Interlacing will start immediately
-		 * (at the next line drawing).
-		 */
     uint8_t frame_skip_amount;
 
 		unsigned interlace : 1;

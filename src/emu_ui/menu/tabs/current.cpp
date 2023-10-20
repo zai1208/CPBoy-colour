@@ -19,16 +19,16 @@ namespace hhk
 
 #define TAB_CURRENT_TITLE         "Current"
 
-#define TAB_CUR_ITEM_COUNT              4
+#define TAB_CUR_ITEM_COUNT              3
 #define TAB_CUR_ITEM_FRAMESKIP_INDEX    0
 #define TAB_CUR_ITEM_FRAMESKIP_TITLE    "Frameskipping"
 #define TAB_CUR_ITEM_FRAMESKIP_SUBTITLE "Skips rendering and LCD-Refresh"
-#define TAB_CUR_ITEM_INTERL_INDEX       1
+#define TAB_CUR_ITEM_INTERL_INDEX       0
 #define TAB_CUR_ITEM_INTERL_TITLE       "Interlacing"
-#define TAB_CUR_ITEM_PALETTE_INDEX      2
+#define TAB_CUR_ITEM_PALETTE_INDEX      1
 #define TAB_CUR_ITEM_PALETTE_TITLE      "Color Palette"
 #define TAB_CUR_ITEM_PALETTE_SUBTITLE   "Select palette for this ROM"
-#define TAB_CUR_ITEM_QUIT_INDEX         3
+#define TAB_CUR_ITEM_QUIT_INDEX         2
 #define TAB_CUR_ITEM_QUIT_TITLE         "Quit CPBoy"
 
 #define DIALOG_FRAMESKIP_ITEM_COUNT   3
@@ -364,13 +364,13 @@ menu_tab *prepare_tab_current(menu_tab *tab, emu_preferences *preferences)
 
   // Disabled state for each item
   tab->items[TAB_CUR_ITEM_FRAMESKIP_INDEX].disabled = false;
-  tab->items[TAB_CUR_ITEM_INTERL_INDEX].disabled = false;
+  // tab->items[TAB_CUR_ITEM_INTERL_INDEX].disabled = false;
   tab->items[TAB_CUR_ITEM_PALETTE_INDEX].disabled = false;
   tab->items[TAB_CUR_ITEM_QUIT_INDEX].disabled = false;
 
   // Title for each item
   strlcpy(tab->items[TAB_CUR_ITEM_FRAMESKIP_INDEX].title, TAB_CUR_ITEM_FRAMESKIP_TITLE, sizeof(tab->items[TAB_CUR_ITEM_FRAMESKIP_INDEX].title));
-  strlcpy(tab->items[TAB_CUR_ITEM_INTERL_INDEX].title, TAB_CUR_ITEM_INTERL_TITLE, sizeof(tab->items[TAB_CUR_ITEM_INTERL_INDEX].title));
+  // strlcpy(tab->items[TAB_CUR_ITEM_INTERL_INDEX].title, TAB_CUR_ITEM_INTERL_TITLE, sizeof(tab->items[TAB_CUR_ITEM_INTERL_INDEX].title));
   strlcpy(tab->items[TAB_CUR_ITEM_PALETTE_INDEX].title, TAB_CUR_ITEM_PALETTE_TITLE, sizeof(tab->items[TAB_CUR_ITEM_PALETTE_INDEX].title));
   strlcpy(tab->items[TAB_CUR_ITEM_QUIT_INDEX].title, TAB_CUR_ITEM_QUIT_TITLE, sizeof(tab->items[TAB_CUR_ITEM_QUIT_INDEX].title));
 
@@ -388,24 +388,24 @@ menu_tab *prepare_tab_current(menu_tab *tab, emu_preferences *preferences)
     strlcat(tab->items[TAB_CUR_ITEM_FRAMESKIP_INDEX].value, ")", sizeof(tab->items[TAB_CUR_ITEM_FRAMESKIP_INDEX].value));
   }
 
-  strlcpy(tab->items[TAB_CUR_ITEM_INTERL_INDEX].value, 
-    (preferences->config.interlacing_enabled)? "Enabled" : "Disabled",
-    sizeof(tab->items[TAB_CUR_ITEM_INTERL_INDEX].value));
+  // strlcpy(tab->items[TAB_CUR_ITEM_INTERL_INDEX].value, 
+  //   (preferences->config.interlacing_enabled)? "Enabled" : "Disabled",
+  //   sizeof(tab->items[TAB_CUR_ITEM_INTERL_INDEX].value));
   strlcpy(tab->items[TAB_CUR_ITEM_PALETTE_INDEX].value, 
     preferences->palettes[preferences->config.selected_palette].name,
-    sizeof(tab->items[TAB_CUR_ITEM_INTERL_INDEX].value));
+    sizeof(tab->items[TAB_CUR_ITEM_PALETTE_INDEX].value));
   tab->items[TAB_CUR_ITEM_QUIT_INDEX].value[0] = '\0';
   
   // Value color for each item
   tab->items[TAB_CUR_ITEM_FRAMESKIP_INDEX].value_color = 
     (preferences->config.frameskip_enabled)? COLOR_SUCCESS : COLOR_DANGER;
-  tab->items[TAB_CUR_ITEM_INTERL_INDEX].value_color = 
-    (preferences->config.interlacing_enabled)? COLOR_SUCCESS : COLOR_DANGER;
+  // tab->items[TAB_CUR_ITEM_INTERL_INDEX].value_color = 
+  //   (preferences->config.interlacing_enabled)? COLOR_SUCCESS : COLOR_DANGER;
   tab->items[TAB_CUR_ITEM_PALETTE_INDEX].value_color = COLOR_SUCCESS;
 
   // Action for each item
   tab->items[TAB_CUR_ITEM_FRAMESKIP_INDEX].action = action_frameskip_selection;
-  tab->items[TAB_CUR_ITEM_INTERL_INDEX].action = action_interlacing_selection;
+  // tab->items[TAB_CUR_ITEM_INTERL_INDEX].action = action_interlacing_selection;
   tab->items[TAB_CUR_ITEM_PALETTE_INDEX].action = action_palette_selection;
   tab->items[TAB_CUR_ITEM_QUIT_INDEX].action = action_quit_emulator;
 

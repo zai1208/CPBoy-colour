@@ -30,6 +30,8 @@ typedef struct
   char current_filename[200];
   char current_rom_name[16];
 
+  bool emulator_paused;
+
   palette *palettes;
   uint8_t palette_count;
 
