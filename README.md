@@ -7,9 +7,9 @@ Since the CAS has a rather slow processor, a high speed emulator core is mandato
 
 ## Getting Started
 
-You will need to have the [Hollyhock-2 CFW](https://github.com/SnailMath/hollyhock-2/) installed. After that just copy the most recent CPBoy.hkk from the releases tab into the root directory of your calculator. 
+You will need to have the [Hollyhock-2 CFW](https://github.com/SnailMath/hollyhock-2/) installed. After that just copy the most recent CPBoy.bin from the releases tab into the root directory of your calculator. 
 
-To load your Gameboy ROM, create a directory named "roms" and copy it to that directory on your calculator. The program should automatically detect the roms and create a selection menu.
+To load your Gameboy ROM, create a directory named "CPBoy" and in there another directory "roms" and copy it to that directory on your calculator. The program should automatically detect the roms and create a selection menu.
 
 
 ## Controls
@@ -38,7 +38,7 @@ To load your Gameboy ROM, create a directory named "roms" and copy it to that di
 
 ## Building
 
-If you want to build the emulator from source you will need the [Hollyhock-2 SDK](https://github.com/SnailMath/hollyhock-2/). Then, run ´make´ in your terminal to build it.
+If you want to build the emulator from source you will need the [Hollyhock-2 SDK + Newlib](https://github.com/SnailMath/hollyhock-2/). Then, run ´make´ in your terminal to build it.
 
 
 ## License
