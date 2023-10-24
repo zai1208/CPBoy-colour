@@ -10,10 +10,10 @@ AS:=sh4-elf-as
 AS_FLAGS:=
 
 CC:=sh4-elf-gcc
-CC_FLAGS:=-ffreestanding -fshort-wchar -Wall -Wextra -O2 -I $(SDK_DIR)/include/ -m4-nofpu
+CC_FLAGS:=-ffreestanding -fshort-wchar -Wall -Wextra -O3 -flto -I $(SDK_DIR)/include/ -m4a-nofpu
 
 CXX:=sh4-elf-g++
-CXX_FLAGS:=-ffreestanding -fno-exceptions -fno-rtti -fshort-wchar -Wall -Wextra -Wno-write-strings -O2 -I $(SDK_DIR)/include/ -m4-nofpu -I $(SDK_DIR)/newlib/sh-elf/include
+CXX_FLAGS:=-ffreestanding -fno-exceptions -fno-rtti -fshort-wchar -Wall -Wextra -Wno-write-strings -O3 -flto -I $(SDK_DIR)/include/ -m4a-nofpu -I $(SDK_DIR)/newlib/sh-elf/include
 
 LD:=sh4-elf-gcc
 LD_FLAGS:=-nostartfiles -m4-nofpu -Wno-undef -L$(SDK_DIR)/newlib/sh-elf/lib
