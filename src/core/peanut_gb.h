@@ -35,6 +35,9 @@
 #include "peanut_gb_header.h"
 #include <stdint.h>	/* Required for int types */
 #include <string.h>
+#include "../helpers/macros.h"
+#include "../cas/cpu/oc_mem.h"
+#include "../cas/cpu/dmac.h"
 
 #define PEANUT_GB_IS_LITTLE_ENDIAN 0
 
@@ -344,8 +347,8 @@
 	* Bit mask for whether a pixel is OBJ0, OBJ1, or BG. Each may have a different
 	* palette when playing a DMG game on CGB.
 	*/
-	#define LCD_PALETTE_OBJ	0x10
-	#define LCD_PALETTE_BG	0x20
+	#define LCD_PALETTE_OBJ	0x04
+	#define LCD_PALETTE_BG	0x08
 	/**
 	* Bit mask for the two bits listed above.
 	* LCD_PALETTE_ALL == 0b00 --> OBJ0
@@ -353,7 +356,7 @@
 	* LCD_PALETTE_ALL == 0b10 --> BG
 	* LCD_PALETTE_ALL == 0b11 --> NOT POSSIBLE
 	*/
-	#define LCD_PALETTE_ALL 0x30
+	#define LCD_PALETTE_ALL 0x0C
 # endif
 #endif
 
@@ -1055,7 +1058,9 @@ static int compare_sprites(const void *in1, const void *in2)
 
 void __gb_draw_line(struct gb_s *gb)
 {
-	uint8_t pixels[160] = {0};
+  emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
+  palette selected_palette = preferences->palettes[preferences->config.selected_palette];
+	uint32_t *pixels = (uint32_t *)IL_MEMORY_0;
 
 	/* If LCD not initialised by front-end, don't render anything. */
 	if(gb->display.lcd_draw_line == NULL)
@@ -1152,10 +1157,10 @@ void __gb_draw_line(struct gb_s *gb)
 
 			/* copy background */
 			c = (t1 & 0x1) | ((t2 & 0x1) << 1);
-			pixels[disp_x] = gb->display.bg_palette[c];
-#if PEANUT_GB_12_COLOUR
-			pixels[disp_x] |= LCD_PALETTE_BG;
-#endif
+
+			pixels[disp_x] = selected_palette.data[LCD_PALETTE_BG >> 2][gb->display.bg_palette[c]];
+			pixels[disp_x] += (pixels[disp_x] << 16);
+
 			t1 = t1 >> 1;
 			t2 = t2 >> 1;
 			px++;
@@ -1220,10 +1225,10 @@ void __gb_draw_line(struct gb_s *gb)
 
 			// copy window
 			c = (t1 & 0x1) | ((t2 & 0x1) << 1);
-			pixels[disp_x] = gb->display.bg_palette[c];
-#if PEANUT_GB_12_COLOUR
-			pixels[disp_x] |= LCD_PALETTE_BG;
-#endif
+
+			pixels[disp_x] = selected_palette.data[LCD_PALETTE_BG >> 2][gb->display.bg_palette[c]];
+			pixels[disp_x] += (pixels[disp_x] << 16);
+
 			t1 = t1 >> 1;
 			t2 = t2 >> 1;
 			px++;
@@ -1349,16 +1354,13 @@ void __gb_draw_line(struct gb_s *gb)
 				uint8_t c = (t1 & 0x1) | ((t2 & 0x1) << 1);
 				// check transparency / sprite overlap / background overlap
 
-				if(c && !(OF & OBJ_PRIORITY && !((pixels[disp_x] & 0x3) == gb->display.bg_palette[0])))
+				if(c && !(OF & OBJ_PRIORITY && !((pixels[disp_x] & 0xFFFF) == selected_palette.data[LCD_PALETTE_BG >> 2][gb->display.bg_palette[0]])))
 				{
 					/* Set pixel colour. */
 					pixels[disp_x] = (OF & OBJ_PALETTE)
-						? gb->display.sp_palette[c + 4]
-						: gb->display.sp_palette[c];
-#if PEANUT_GB_12_COLOUR
-					/* Set pixel palette (OBJ0 or OBJ1). */
-					pixels[disp_x] |= (OF & OBJ_PALETTE);
-#endif
+						? selected_palette.data[(LCD_PALETTE_OBJ >> 2)][gb->display.sp_palette[c + 4]]
+						: selected_palette.data[(LCD_PALETTE_OBJ >> 2) - 1][gb->display.sp_palette[c]];
+          pixels[disp_x] += (pixels[disp_x] << 16);
 				}
 
 				t1 = t1 >> 1;
@@ -3109,7 +3111,7 @@ void gb_run_frame(struct gb_s *gb)
 {
 	gb->gb_frame = 0;
 
-	while(!gb->gb_frame)
+	while(likely(!gb->gb_frame))
 		__gb_step_cpu(gb);
 }
 
@@ -3348,7 +3350,7 @@ const char* gb_get_rom_name(struct gb_s* gb, char *title_str)
 #if ENABLE_LCD
 void gb_init_lcd(struct gb_s *gb,
 		void (*lcd_draw_line)(struct gb_s *gb,
-			const uint8_t *pixels,
+			const uint32_t *pixels,
 			const uint_fast8_t line))
 {
 	gb->display.lcd_draw_line = lcd_draw_line;
@@ -3484,7 +3486,7 @@ void gb_reset(struct gb_s *gb);
 #if ENABLE_LCD
 void gb_init_lcd(struct gb_s *gb,
 		void (*lcd_draw_line)(struct gb_s *gb,
-			const uint8_t *pixels,
+			const uint32_t *pixels,
 			const uint_fast8_t line));
 #endif
 

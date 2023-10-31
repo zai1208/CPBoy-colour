@@ -27,3 +27,6 @@
 	((rgb555 & 0b0000001111100000) <<1) | \
 	(rgb555 & 0b0000000000011111) \
 )
+
+#define likely(x)   __builtin_expect(!!(x), 1)
+#define unlikely(x) __builtin_expect(!!(x), 0)

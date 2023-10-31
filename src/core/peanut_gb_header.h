@@ -159,8 +159,8 @@
 #define LCDC_BG_ENABLE      0x01
 
 /* LCD characteristics */
-#define LCD_LINE_CYCLES     (456 + 4)
-#define LCD_MODE_0_CYCLES   0
+#define LCD_LINE_CYCLES     456
+#define LCD_MODE_0_CYCLES   372
 #define LCD_MODE_2_CYCLES   204
 #define LCD_MODE_3_CYCLES   284
 #define LCD_VERT_LINES      154
@@ -422,8 +422,8 @@ struct count_s
 	* Bit mask for whether a pixel is OBJ0, OBJ1, or BG. Each may have a different
 	* palette when playing a DMG game on CGB.
 	*/
-	#define LCD_PALETTE_OBJ	0x10
-	#define LCD_PALETTE_BG	0x20
+	#define LCD_PALETTE_OBJ	0x04
+	#define LCD_PALETTE_BG	0x08
 	/**
 	* Bit mask for the two bits listed above.
 	* LCD_PALETTE_ALL == 0b00 --> OBJ0
@@ -431,7 +431,7 @@ struct count_s
 	* LCD_PALETTE_ALL == 0b10 --> BG
 	* LCD_PALETTE_ALL == 0b11 --> NOT POSSIBLE
 	*/
-	#define LCD_PALETTE_ALL 0x30
+	#define LCD_PALETTE_ALL 0x0C
 #endif
 
 /**
@@ -588,7 +588,7 @@ struct gb_s
 		 * guaranteed to be between 0-144 inclusive.
 		 */
 		void (*lcd_draw_line)(struct gb_s *gb,
-				const uint8_t *pixels,
+				const uint32_t *pixels,
 				const uint_fast8_t line);
 
 		/* Palettes */
@@ -3696,7 +3696,7 @@ void gb_reset(struct gb_s *gb);
 #if ENABLE_LCD
 void gb_init_lcd(struct gb_s *gb,
 		void (*lcd_draw_line)(struct gb_s *gb,
-			const uint8_t *pixels,
+			const uint32_t *pixels,
 			const uint_fast8_t line));
 #endif
 

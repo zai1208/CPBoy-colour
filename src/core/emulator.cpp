@@ -7,11 +7,12 @@
 #include <sdk/os/file.hpp>
 #include <sdk/os/input.hpp>
 #include <sdk/os/debug.hpp>
-#include "cart_ram.h"
-#include "cas_display.h"
 #include "controls.h"
 #include "error.h"
 #include "peanut_gb.h"
+#include "cart_ram.h"
+#include "../cas/display.h"
+#include "../cas/cpu/dmac.h"
 #include "../emu_ui/menu/menu.h"
 #include "../helpers/macros.h"
 #include "../helpers/functions.h"
@@ -101,15 +102,14 @@ void set_interlacing(struct gb_s *gb, bool enabled)
 }
 
 // Draws scanline into framebuffer.
-void lcd_draw_line(struct gb_s *gb, const uint8_t pixels[160],
+void lcd_draw_line(struct gb_s *gb, const uint32_t pixels[160],
   const uint_fast8_t line)
 {
   emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
   palette selected_palette = preferences->palettes[preferences->config.selected_palette];
-  uint32_t *ssdr = (uint32_t *)SERIAL_SCREEN_DATA_REGISTER;
 
-  // When emulator will be paused, render a full frame in vram
-  if (preferences->emulator_paused)
+  // When emulator will be paused, render a full frame in vram (TODO: Update to new pixel format)
+  if (unlikely(preferences->emulator_paused))
   {
     const uint32_t offset = line * (LCD_WIDTH * 4);
 
@@ -128,35 +128,48 @@ void lcd_draw_line(struct gb_s *gb, const uint8_t pixels[160],
     return;
   }
 
-  for (uint8_t i = 0; i < 2; i++) 
-  {
-    for(uint16_t x = 0; x < LCD_WIDTH; x++)
-    {
-      uint16_t color = selected_palette.data
-        [(pixels[x] & LCD_PALETTE_ALL) >> 4]
-        [pixels[x] & 3];
+  // Wait for previous DMA completion
+  dma_wait(DMAC_CHCR_0);
 
-      *ssdr = color | (color << 16);
-    }
-  }
+  // Initialize DMA settings
+  dmac_chcr tmp_chcr = { .raw = 0 };
+  tmp_chcr.TS_0 = SIZE_32_0;
+  tmp_chcr.TS_1 = SIZE_32_1;
+  tmp_chcr.DM   = DAR_FIXED_SOFT;
+  tmp_chcr.SM   = SAR_INCREMENT;
+  tmp_chcr.RS   = AUTO;
+  tmp_chcr.TB   = CYCLE_STEAL;
+  tmp_chcr.RPT  = RELOAD_SAR_TCR;
+  tmp_chcr.DE   = 1;
+
+  DMAC_CHCR_0->raw = 0;
+  
+  *DMAC_SAR_0   = (uint32_t)pixels;                            // P4 Area (IL-Memory) => Physical address is same as virtual
+  *DMAC_DAR_0   = (uint32_t)SCREEN_DATA_REGISTER & 0x1FFFFFFF; // P2 Area => Physical address is virtual with 3 ms bits cleared
+  *DMAC_TCR_0   = (CAS_LCD_WIDTH * 2) / 32 * 2;                // (Pixels per line * bytes per pixel) / dmac operation bytes * 2 lines      
+  *DMAC_TCRB_0  = ((CAS_LCD_WIDTH * 2 / 32) << 16) 
+    | (CAS_LCD_WIDTH * 2 / 32);
+
+  // Start Channel 0
+  DMAC_CHCR_0->raw = tmp_chcr.raw;
 }
 
 // Returns a byte from the ROM file at the given address.
-uint8_t gb_rom_read(struct gb_s *gb, const uint_fast32_t addr)
+inline uint8_t gb_rom_read(struct gb_s *gb, const uint_fast32_t addr)
 {
   const emu_preferences *const p = (emu_preferences *)gb->direct.priv;
   return p->rom[addr];
 }
 
 // Returns a byte from the cartridge RAM at the given address.
-uint8_t gb_cart_ram_read(struct gb_s *gb, const uint_fast32_t addr)
+inline uint8_t gb_cart_ram_read(struct gb_s *gb, const uint_fast32_t addr)
 {
   const emu_preferences *const p = (emu_preferences *)gb->direct.priv;
   return p->cart_ram[addr];
 }
 
 // Writes a given byte to the cartridge RAM at the given address.
-void gb_cart_ram_write(struct gb_s *gb, const uint_fast32_t addr, 
+inline void gb_cart_ram_write(struct gb_s *gb, const uint_fast32_t addr, 
   const uint8_t val)
 {
   const emu_preferences *const p = (emu_preferences *)gb->direct.priv;
@@ -299,7 +312,7 @@ uint8_t execute_rom(struct gb_s *gb)
   for (;;)
   {
     // Handle rtc
-    if (gb->display.frame_count % 24 == 0)
+    if (unlikely(gb->display.frame_count % 24 == 0))
     {
       gb_tick_rtc(gb);
     }
@@ -309,7 +322,7 @@ uint8_t execute_rom(struct gb_s *gb)
     {
       if ((gb->display.frame_count % gb->direct.frame_skip_amount) == 0)
       {
-        prepare_lcd();
+        prepare_gb_lcd();
         refreshed_lcd = true;
       }
       else
@@ -319,7 +332,7 @@ uint8_t execute_rom(struct gb_s *gb)
     }
     else
     {
-      prepare_lcd();
+      prepare_gb_lcd();
       refreshed_lcd = true;
     }
 
@@ -327,7 +340,7 @@ uint8_t execute_rom(struct gb_s *gb)
     gb_run_frame(gb);
 
     // Check if pause menu should be displayed
-    if (preferences->emulator_paused && refreshed_lcd)
+    if (unlikely(preferences->emulator_paused && refreshed_lcd))
     {
       uint8_t menu_code = emulation_menu(gb, false);
 
@@ -342,7 +355,7 @@ uint8_t execute_rom(struct gb_s *gb)
     }
 
     // Handle input
-    if (execution_handle_input(gb) == INPUT_OPEN_MENU)
+    if (unlikely(execution_handle_input(gb) == INPUT_OPEN_MENU))
     {
       // Do not actually open the menu, but render another frame for gb preview first
       preferences->emulator_paused = true;
