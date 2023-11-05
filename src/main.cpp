@@ -22,14 +22,11 @@
  * IN THE SOFTWARE.
  */
 
-#include <string.h>
 #include <appdef.hpp>
 #include <sdk/calc/calc.hpp>
-#include <sdk/os/mcs.hpp>
+#include "cas/bootstrap.h"
 #include "core/emulator.h"
 #include "core/error.h"
-#include "cas/cpu/power.h"
-#include "cas/cpu/dmac.h"
 
 APP_NAME("CPBoy")
 APP_DESCRIPTION("A Gameboy (DMG) emulator. Forked from PeanutGB by deltabeard.")
@@ -39,17 +36,16 @@ APP_VERSION(CPBOY_VERSION)
 gb_s main_gb;
 emu_preferences main_preferences;
 
-void setup_cas_cpu();
-void restore_cas_cpu();
-
 extern "C" 
 int32_t main() 
 {
   calcInit();
-  setup_cas_cpu();
 
-  // Create main folder for mcs vars
-  MCS_CreateFolder("CPBoy", nullptr);
+  if (setup_cas())
+  {
+    error_crash_alert(get_error_string(errno));
+    goto end;
+  }
 
   if (run_emulator(&main_gb, &main_preferences) != 0) 
   {
@@ -57,22 +53,8 @@ int32_t main()
     error_crash_alert(get_error_string(errno));
   }
 
-  restore_cas_cpu(); 
+end:
+  restore_cas(); 
   calcEnd();
   return 0;
-}
-
-void setup_cas_cpu()
-{
-  // Enable DMA Controller
-  POWER_MSTPCR0->raw &= ~(1 << 21);
-  DMAC_DMAOR->raw = 0;
-  DMAC_DMAOR->DME = 1;
-}
-
-void restore_cas_cpu() 
-{
-  // Disable DMA Controller
-  DMAC_DMAOR->DME = 0;
-  POWER_MSTPCR0->raw |= (1 << 21);
 }

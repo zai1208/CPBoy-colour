@@ -50,7 +50,7 @@ uint8_t execution_handle_input(struct gb_s *gb)
   gb->direct.joypad_bits.right =  !((key1 & preferences->controls[GB_KEY_RIGHT][0])   | (key2 & preferences->controls[GB_KEY_RIGHT][1]));
 
   // Check if menu should be opened
-  if(testKey(key1, key2, KEY_NEGATIVE))
+  if (testKey(key1, key2, KEY_NEGATIVE))
   {
     return INPUT_OPEN_MENU;
   }
@@ -128,7 +128,7 @@ void lcd_draw_line(struct gb_s *gb, const uint32_t pixels[160],
     return;
   }
 
-  // Wait for previous DMA completion
+  // Wait for previous DMA to complete
   dma_wait(DMAC_CHCR_0);
 
   // Initialize DMA settings
@@ -144,7 +144,7 @@ void lcd_draw_line(struct gb_s *gb, const uint32_t pixels[160],
 
   DMAC_CHCR_0->raw = 0;
   
-  *DMAC_SAR_0   = (uint32_t)pixels;                            // P4 Area (IL-Memory) => Physical address is same as virtual
+  *DMAC_SAR_0   = (uint32_t)pixels;                            // P4 Area (OC-Memory) => Physical address is same as virtual
   *DMAC_DAR_0   = (uint32_t)SCREEN_DATA_REGISTER & 0x1FFFFFFF; // P2 Area => Physical address is virtual with 3 ms bits cleared
   *DMAC_TCR_0   = (CAS_LCD_WIDTH * 2) / 32 * 2;                // (Pixels per line * bytes per pixel) / dmac operation bytes * 2 lines      
   *DMAC_TCRB_0  = ((CAS_LCD_WIDTH * 2 / 32) << 16) 
@@ -155,21 +155,21 @@ void lcd_draw_line(struct gb_s *gb, const uint32_t pixels[160],
 }
 
 // Returns a byte from the ROM file at the given address.
-inline uint8_t gb_rom_read(struct gb_s *gb, const uint_fast32_t addr)
+uint8_t __attribute__((section(".il_mem.text"))) gb_rom_read(struct gb_s *gb, const uint_fast32_t addr)
 {
   const emu_preferences *const p = (emu_preferences *)gb->direct.priv;
   return p->rom[addr];
 }
 
 // Returns a byte from the cartridge RAM at the given address.
-inline uint8_t gb_cart_ram_read(struct gb_s *gb, const uint_fast32_t addr)
+uint8_t __attribute__((section(".il_mem.text"))) gb_cart_ram_read(struct gb_s *gb, const uint_fast32_t addr)
 {
   const emu_preferences *const p = (emu_preferences *)gb->direct.priv;
   return p->cart_ram[addr];
 }
 
 // Writes a given byte to the cartridge RAM at the given address.
-inline void gb_cart_ram_write(struct gb_s *gb, const uint_fast32_t addr, 
+void __attribute__((section(".il_mem.text"))) gb_cart_ram_write(struct gb_s *gb, const uint_fast32_t addr, 
   const uint8_t val)
 {
   const emu_preferences *const p = (emu_preferences *)gb->direct.priv;
@@ -437,32 +437,16 @@ uint8_t load_rom(emu_preferences *prefs)
   char rom_filename[MAX_FILENAME_LEN] = DIRECTORY_ROM "\\";
   strncat(rom_filename, prefs->current_filename, MAX_FILENAME_LEN);
   rom_filename[MAX_FILENAME_LEN - 1] = '\0';
-  
-  // Open file, get size and allocate memory for reading
-	int32_t rom_file = open(rom_filename, OPEN_READ);	
+
+  size_t rom_size;
 	
-	if (rom_file < 0)
+	if (get_file_size(rom_filename, &rom_size))
   {
-    set_error_i(EFOPEN, rom_filename);
-		return 1;
-  }
-
-	struct stat rom_file_stat;
-
-	if (fstat(rom_file, &rom_file_stat) < 0)
-  {
-    set_error(EFREAD);
-		return 1;
-  }
-
-	if (close(rom_file) < 0)
-  {
-    set_error(EFCLOSE);
-		return 1;
+    return 1;
   }
 
 	// dynamically allocate space for rom in heap
-	prefs->rom = (uint8_t *)malloc(rom_file_stat.fileSize);
+	prefs->rom = (uint8_t *)malloc(rom_size);
 
 	// check if pointer to rom is no nullptr
 	if (!prefs->rom)
@@ -471,14 +455,14 @@ uint8_t load_rom(emu_preferences *prefs)
     char tmp[20];
 
     strlcpy(err_info, "GB ROM: ", sizeof(err_info));
-    strlcat(err_info, itoa(rom_file_stat.fileSize, tmp, 10), sizeof(err_info));
+    strlcat(err_info, itoa(rom_size, tmp, 10), sizeof(err_info));
     strlcat(err_info, "B", sizeof(err_info));
     
     set_error_i(EMALLOC, err_info);
 		return 1;
   }
 
-  if(read_file(rom_filename, prefs->rom, rom_file_stat.fileSize) != 0)
+  if(read_file(rom_filename, prefs->rom, rom_size) != 0)
   {
     return 1;
   }

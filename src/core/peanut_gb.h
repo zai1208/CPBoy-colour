@@ -400,7 +400,7 @@
  * Internal function used to read bytes.
  * addr is host platform endian.
  */
-uint8_t __gb_read(struct gb_s *gb, uint16_t addr)
+uint8_t __attribute__((section(".il_mem.text"))) __gb_read(struct gb_s *gb, uint16_t addr)
 {
 	switch(PEANUT_GB_GET_MSN16(addr))
 	{
@@ -509,7 +509,7 @@ uint8_t __gb_read(struct gb_s *gb, uint16_t addr)
 /**
  * Internal function used to write bytes.
  */
-void __gb_write(struct gb_s *gb, uint_fast16_t addr, uint8_t val)
+void __attribute__((section(".il_mem.text"))) __gb_write(struct gb_s *gb, uint_fast16_t addr, uint8_t val)
 {
 	switch(PEANUT_GB_GET_MSN16(addr))
 	{
@@ -1056,11 +1056,11 @@ static int compare_sprites(const void *in1, const void *in2)
 }
 #endif
 
-void __gb_draw_line(struct gb_s *gb)
+void __attribute__((section(".il_mem.text"))) __gb_draw_line(struct gb_s *gb)
 {
   emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
   palette selected_palette = preferences->palettes[preferences->config.selected_palette];
-	uint32_t *pixels = (uint32_t *)IL_MEMORY_0;
+  uint32_t *pixels = (uint32_t *)Y_MEMORY_0;
 
 	/* If LCD not initialised by front-end, don't render anything. */
 	if(gb->display.lcd_draw_line == NULL)
@@ -3107,7 +3107,7 @@ void __gb_step_cpu(struct gb_s *gb)
 	/* If halted, loop until an interrupt occurs. */
 }
 
-void gb_run_frame(struct gb_s *gb)
+void __attribute__((section(".il_mem.text"))) gb_run_frame(struct gb_s *gb)
 {
 	gb->gb_frame = 0;
 

@@ -16,6 +16,7 @@
 
 #define DIRECTORY_MAIN     "\\fls0\\CPBoy\\"
 #define DIRECTORY_ROM      DIRECTORY_MAIN "roms"
+#define DIRECTORY_BIN      DIRECTORY_MAIN "bin"
 
 #define EXTENSION_ROM     ".gb"
 

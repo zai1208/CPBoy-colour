@@ -66,7 +66,7 @@ uint8_t _write_file(const char *file, void *buf, size_t len, const char *err_fil
 
   char err_info[ERROR_MAX_INFO_LEN];
   strlcpy(err_info, "w: ", sizeof(err_info));
-  strlcat(err_info, file, sizeof(err_info) - 4);
+  strlcat(err_info, file, sizeof(err_info));
 
   if (fd < 0)
   {
@@ -97,7 +97,7 @@ uint8_t _read_file(const char *file, void *buf, size_t len, const char *err_file
 
   char err_info[ERROR_MAX_INFO_LEN];
   strlcpy(err_info, "r: ", sizeof(err_info));
-  strlcat(err_info, file, sizeof(err_info) - 4);
+  strlcat(err_info, file, sizeof(err_info));
 
   if (fd < 0)
   {
@@ -129,6 +129,39 @@ uint8_t _delete_file(const char *file, const char *err_file, uint32_t err_line)
     _set_error(EFCLOSE, err_file, err_line, file);
     return 1;
   }
+
+  return 0;
+}
+
+uint8_t _get_file_size(const char *file, size_t *size, const char *err_file, uint32_t err_line)
+{
+	int32_t fd = open(file, OPEN_READ);
+  
+  char err_info[ERROR_MAX_INFO_LEN];
+  strlcpy(err_info, "r: ", sizeof(err_info));
+  strlcat(err_info, file, sizeof(err_info));
+	
+	if (fd < 0)
+  {
+    _set_error(EFOPEN, err_file, err_line, err_info);
+		return 1;
+  }
+
+	struct stat file_stat;
+
+	if (fstat(fd, &file_stat) < 0)
+  {
+    _set_error(EFREAD, err_file, err_line, err_info);
+		return 1;
+  }
+
+	if (close(fd) < 0)
+  {
+    _set_error(EFCLOSE, err_file, err_line, err_info);
+		return 1;
+  }  
+
+  *size = file_stat.fileSize;
 
   return 0;
 }

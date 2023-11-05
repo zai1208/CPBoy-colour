@@ -19,7 +19,26 @@ SECTIONS {
 	.hollyhock_version : {
 		*(.hollyhock_version)
 	}
+
 	.text : {
 		*(.text)
+		*(.rodata*)
+  }
+
+	.data : {
+		*(.data)
 	}
+
+	.bss : {
+		*(.bss)
+    *(COMMON)
+	}
+  
+  il_mem_addr = 0xE5200000;
+  . = il_mem_addr;
+
+  .il_mem : {
+    *(.il_mem.data)
+    *(.il_mem.text)
+  }
 }

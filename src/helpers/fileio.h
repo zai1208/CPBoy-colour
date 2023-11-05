@@ -44,6 +44,16 @@
 #define delete_file(file) _delete_file(file, __FILE__, __LINE__)
 
 /**
+ * Gets the size of a file in bytes and does error handling. 
+ *   
+ * @param file  The file to be checked
+ * @param size  A pointer to where the size will be written to
+ * 
+ * @return Returns 0 on success else an error occured
+*/
+#define get_file_size(file, size) _get_file_size(file, size, __FILE__, __LINE__)
+
+/**
  * Find files matching the given path
  *   
  * @param path  The path to be searched (Can contain wildcards)
@@ -61,3 +71,4 @@ uint8_t _read_mcs(const char *dir, const char *name, void **buf, uint32_t *len,
 uint8_t _write_file(const char *file, void *buf, size_t len, const char *err_file, uint32_t err_line);
 uint8_t _read_file(const char *file, void *buf, size_t len, const char *err_file, uint32_t err_line);
 uint8_t _delete_file(const char *file, const char *err_file, uint32_t err_line);
+uint8_t _get_file_size(const char *file, size_t *size, const char *err_file, uint32_t err_line);
