@@ -106,23 +106,14 @@ void lcd_draw_line(struct gb_s *gb, const uint32_t pixels[160],
   const uint_fast8_t line)
 {
   emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
-  palette selected_palette = preferences->palettes[preferences->config.selected_palette];
 
   // When emulator will be paused, render a full frame in vram (TODO: Update to new pixel format)
   if (unlikely(preferences->emulator_paused))
   {
-    const uint32_t offset = line * (LCD_WIDTH * 4);
-
-    for(uint16_t x = 0; x < LCD_WIDTH; x++)
+    for (uint16_t i = 0; i < LCD_WIDTH; i++)
     {
-      uint16_t color = selected_palette.data
-        [(pixels[x] & LCD_PALETTE_ALL) >> 4]
-        [pixels[x] & 3];
-
-      vram[offset + (x * 2)] = color;
-      vram[offset + (x * 2) + 1] = color;
-      vram[offset + (LCD_WIDTH * 2) + (x * 2)] = color;
-      vram[offset + (LCD_WIDTH * 2) + (x * 2) + 1] = color;
+      *(uint32_t *)&vram[(i * 2) + ((line * 2) * CAS_LCD_WIDTH)] = pixels[i];
+      *(uint32_t *)&vram[(i * 2) + (((line * 2) + 1) * CAS_LCD_WIDTH)] = pixels[i];
     }
 
     return;
