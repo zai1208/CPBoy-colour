@@ -11,10 +11,10 @@ AS:=sh4-elf-as
 AS_FLAGS:=
 
 CC:=sh4-elf-gcc
-CC_FLAGS:=-ffreestanding -fshort-wchar -Wall -Wextra -O3 -flto -I $(SDK_DIR)/include/ -m4a-nofpu
+CC_FLAGS:=-ffreestanding -fshort-wchar -Wall -Wextra -O3 -I $(SDK_DIR)/include/ -m4a-nofpu
 
 CXX:=sh4-elf-g++
-CXX_FLAGS:=-ffreestanding -fno-exceptions -fno-rtti -fshort-wchar -Wall -Wextra -Wno-write-strings -O3 -flto -I $(SDK_DIR)/include/ -m4a-nofpu -I $(SDK_DIR)/newlib/sh-elf/include
+CXX_FLAGS:=-ffreestanding -fno-exceptions -fno-rtti -fshort-wchar -Wall -Wextra -Wno-write-strings -O3 -I $(SDK_DIR)/include/ -m4a-nofpu -I $(SDK_DIR)/newlib/sh-elf/include
 
 LD:=sh4-elf-gcc
 LD_FLAGS:=-nostartfiles -m4-nofpu -Wno-undef -L$(SDK_DIR)/newlib/sh-elf/lib
@@ -25,7 +25,7 @@ OBJCOPY:=sh4-elf-objcopy
 SOURCEDIR = src
 BUILDDIR = obj
 OUTDIR = dist
-BINDIR = $(OUTDIR)/bin
+BINDIR = $(OUTDIR)/CPBoy/bin
 
 AS_SOURCES:=$(shell find $(SOURCEDIR) -name '*.s')
 CC_SOURCES:=$(shell find $(SOURCEDIR) -name '*.c')
@@ -34,9 +34,7 @@ OBJECTS := $(addprefix $(BUILDDIR)/,$(AS_SOURCES:.s=.o)) \
 	$(addprefix $(BUILDDIR)/,$(CC_SOURCES:.c=.o)) \
 	$(addprefix $(BUILDDIR)/,$(CXX_SOURCES:.cpp=.o))
 
-$(warning $(OBJECTS))
-
-APP_ELF:=$(OUTDIR)/$(APP_NAME).hhk
+APP_ELF:=$(OUTDIR)/$(APP_NAME).elf
 APP_BIN:=$(OUTDIR)/$(APP_NAME).bin
 IL_BIN:=$(BINDIR)/$(IL_NAME).bin
 
@@ -55,12 +53,9 @@ $(APP_BIN): $(APP_ELF)
 $(IL_BIN): $(APP_ELF) $(BINDIR)
 	$(OBJCOPY) --only-section=.il_mem* --output-target=binary $(APP_ELF) $@
 
-$(APP_ELF): $(OBJECTS) $(SDK_DIR)/sdk.o linker.ld $(OUTDIR)
+$(APP_ELF): $(OBJECTS) $(SDK_DIR)/sdk.o linker.ld
+	mkdir -p $(dir $@)
 	$(LD) -T linker.ld -o $@ $(LD_FLAGS) $(OBJECTS) $(SDK_DIR)/sdk.o
-	$(OBJCOPY) --set-section-flags .hollyhock_name=contents,strings,readonly $(APP_ELF) $(APP_ELF)
-	$(OBJCOPY) --set-section-flags .hollyhock_description=contents,strings,readonly $(APP_ELF) $(APP_ELF)
-	$(OBJCOPY) --set-section-flags .hollyhock_author=contents,strings,readonly $(APP_ELF) $(APP_ELF)
-	$(OBJCOPY) --set-section-flags .hollyhock_version=contents,strings,readonly $(APP_ELF) $(APP_ELF)
 
 # We're not actually building sdk.o, just telling the user they need to do it
 # themselves. Just using the target to trigger an error when the file is
