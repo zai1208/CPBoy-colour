@@ -34,6 +34,20 @@ SECTIONS {
     *(COMMON)
 	}
   
+  x_mem_addr = 0xE5007000;
+  . = x_mem_addr;
+
+  .x_mem : {
+    *(.x_mem)
+  }
+  
+  y_mem_addr = 0xE5017000;
+  . = y_mem_addr;
+
+  .y_mem : {
+    *(.y_mem)
+  }
+  
   il_mem_addr = 0xE5200000;
   . = il_mem_addr;
 

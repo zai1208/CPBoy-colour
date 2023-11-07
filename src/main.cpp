@@ -33,8 +33,8 @@ APP_DESCRIPTION("A Gameboy (DMG) emulator. Forked from PeanutGB by deltabeard.")
 APP_AUTHOR("diddyholz")
 APP_VERSION(CPBOY_VERSION)
 
-gb_s main_gb;
-emu_preferences main_preferences;
+gb_s main_gb __attribute__((section(".y_mem")));
+emu_preferences main_preferences __attribute__((section(".y_mem")));
 
 extern "C" 
 int32_t main() 

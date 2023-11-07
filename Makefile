@@ -48,7 +48,7 @@ clean:
 	rm -rf $(BUILDDIR) $(OUTDIR)
 
 $(APP_BIN): $(APP_ELF)
-	$(OBJCOPY) --remove-section=.il_mem* --output-target=binary $(APP_ELF) $@
+	$(OBJCOPY) --remove-section=.il_mem* --remove-section=.x_mem* --remove-section=.y_mem* --output-target=binary $(APP_ELF) $@
 
 $(IL_BIN): $(APP_ELF) $(BINDIR)
 	$(OBJCOPY) --only-section=.il_mem* --output-target=binary $(APP_ELF) $@

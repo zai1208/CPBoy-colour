@@ -259,7 +259,7 @@ uint8_t prepare_emulator(struct gb_s *gb, emu_preferences *preferences)
   // load_savestates();
 
   // check if loaded palette is out of range
-  if(preferences->config.selected_palette >= preferences->palette_count) 
+  if (preferences->config.selected_palette >= preferences->palette_count) 
   {
     // Reset to default palette
     preferences->config.selected_palette = 0;
