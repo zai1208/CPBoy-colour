@@ -393,7 +393,8 @@
 #define IO_STAT_MODE_SEARCH_TRANSFER	3
 #define IO_STAT_MODE_VBLANK_OR_TRANSFER_MASK 0x1
 
-uint32_t lcd_pixels[LCD_WIDTH] __attribute__((section(".oc_mem.y")));
+/* Two pixel arrays for double buffering */
+uint32_t lcd_pixels[2][LCD_WIDTH] __attribute__((section(".oc_mem.y")));
 
 /**
  * Internal function used to read bytes.
@@ -1060,6 +1061,9 @@ void __attribute__((section(".oc_mem.il.text"))) __gb_draw_line(struct gb_s *gb)
   emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
   palette selected_palette = preferences->palettes[preferences->config.selected_palette];
 
+  /* Select which buffer to use for the current line */
+  uint32_t *pixels = lcd_pixels[gb->hram_io[IO_LY] % 2];
+
 	/* If LCD not initialised by front-end, don't render anything. */
 	if(gb->display.lcd_draw_line == NULL)
 		return;
@@ -1156,8 +1160,8 @@ void __attribute__((section(".oc_mem.il.text"))) __gb_draw_line(struct gb_s *gb)
 			/* copy background */
 			c = (t1 & 0x1) | ((t2 & 0x1) << 1);
 
-			lcd_pixels[disp_x] = selected_palette.data[LCD_PALETTE_BG >> 2][gb->display.bg_palette[c]];
-			lcd_pixels[disp_x] += (lcd_pixels[disp_x] << 16);
+			pixels[disp_x] = selected_palette.data[LCD_PALETTE_BG >> 2][gb->display.bg_palette[c]];
+			pixels[disp_x] += (pixels[disp_x] << 16);
 
 			t1 = t1 >> 1;
 			t2 = t2 >> 1;
@@ -1224,8 +1228,8 @@ void __attribute__((section(".oc_mem.il.text"))) __gb_draw_line(struct gb_s *gb)
 			// copy window
 			c = (t1 & 0x1) | ((t2 & 0x1) << 1);
 
-			lcd_pixels[disp_x] = selected_palette.data[LCD_PALETTE_BG >> 2][gb->display.bg_palette[c]];
-			lcd_pixels[disp_x] += (lcd_pixels[disp_x] << 16);
+			pixels[disp_x] = selected_palette.data[LCD_PALETTE_BG >> 2][gb->display.bg_palette[c]];
+			pixels[disp_x] += (pixels[disp_x] << 16);
 
 			t1 = t1 >> 1;
 			t2 = t2 >> 1;
@@ -1352,13 +1356,13 @@ void __attribute__((section(".oc_mem.il.text"))) __gb_draw_line(struct gb_s *gb)
 				uint8_t c = (t1 & 0x1) | ((t2 & 0x1) << 1);
 				// check transparency / sprite overlap / background overlap
 
-				if(c && !(OF & OBJ_PRIORITY && !((lcd_pixels[disp_x] & 0xFFFF) == selected_palette.data[LCD_PALETTE_BG >> 2][gb->display.bg_palette[0]])))
+				if(c && !(OF & OBJ_PRIORITY && !((pixels[disp_x] & 0xFFFF) == selected_palette.data[LCD_PALETTE_BG >> 2][gb->display.bg_palette[0]])))
 				{
 					/* Set pixel colour. */
-					lcd_pixels[disp_x] = (OF & OBJ_PALETTE)
+					pixels[disp_x] = (OF & OBJ_PALETTE)
 						? selected_palette.data[(LCD_PALETTE_OBJ >> 2)][gb->display.sp_palette[c + 4]]
 						: selected_palette.data[(LCD_PALETTE_OBJ >> 2) - 1][gb->display.sp_palette[c]];
-          lcd_pixels[disp_x] += (lcd_pixels[disp_x] << 16);
+          pixels[disp_x] += (pixels[disp_x] << 16);
 				}
 
 				t1 = t1 >> 1;
@@ -1367,7 +1371,7 @@ void __attribute__((section(".oc_mem.il.text"))) __gb_draw_line(struct gb_s *gb)
 		}
 	}
 
-	gb->display.lcd_draw_line(gb, lcd_pixels, gb->hram_io[IO_LY]);
+	gb->display.lcd_draw_line(gb, pixels, gb->hram_io[IO_LY]);
 }
 #endif
 
