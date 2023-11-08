@@ -29,15 +29,6 @@ uint8_t gb_hram_io[HRAM_IO_SIZE] __attribute__((section(".oc_mem.y")));
 
 uint8_t execution_handle_input(struct gb_s *gb)
 {
-  // Skip this function if no keys are pressed
-  if (!Input_IsAnyKeyDown())
-  {
-    // Unpress all buttons
-    gb->direct.joypad = 0xFF;
-
-    return INPUT_NONE;
-  }
-
   uint32_t key1;
   uint32_t key2;
 
@@ -45,6 +36,13 @@ uint8_t execution_handle_input(struct gb_s *gb)
 
   // Handle Key Input
   getKey(&key1, &key2);
+
+  // Skip this function if no keys are pressed
+  if (!Input_IsAnyKeyDown())
+  {
+    key1 = 0;
+    key2 = 0;
+  }
 
   gb->direct.joypad_bits.a =      !((key1 & preferences->controls[GB_KEY_A][0])       | (key2 & preferences->controls[GB_KEY_A][1]));
   gb->direct.joypad_bits.b =      !((key1 & preferences->controls[GB_KEY_B][0])       | (key2 & preferences->controls[GB_KEY_B][1]));
