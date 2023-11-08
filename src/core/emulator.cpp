@@ -21,6 +21,12 @@
 #define INPUT_NONE      0
 #define INPUT_OPEN_MENU 1
 
+/* Global arrays in OC-Memory */
+uint8_t gb_wram[WRAM_SIZE];
+uint8_t gb_vram[VRAM_SIZE] __attribute__((section(".oc_mem.x")));
+uint8_t gb_oam[OAM_SIZE] __attribute__((section(".oc_mem.y")));
+uint8_t gb_hram_io[HRAM_IO_SIZE] __attribute__((section(".oc_mem.y")));
+
 uint8_t execution_handle_input(struct gb_s *gb)
 {
   // Skip this function if no keys are pressed
@@ -107,7 +113,7 @@ void lcd_draw_line(struct gb_s *gb, const uint32_t pixels[160],
 {
   emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
 
-  // When emulator will be paused, render a full frame in vram (TODO: Update to new pixel format)
+  // When emulator will be paused, render a full frame in vram
   if (unlikely(preferences->emulator_paused))
   {
     for (uint16_t i = 0; i < LCD_WIDTH; i++)
@@ -146,21 +152,21 @@ void lcd_draw_line(struct gb_s *gb, const uint32_t pixels[160],
 }
 
 // Returns a byte from the ROM file at the given address.
-uint8_t __attribute__((section(".il_mem.text"))) gb_rom_read(struct gb_s *gb, const uint_fast32_t addr)
+uint8_t __attribute__((section(".oc_mem.il.text"))) gb_rom_read(struct gb_s *gb, const uint_fast32_t addr)
 {
   const emu_preferences *const p = (emu_preferences *)gb->direct.priv;
   return p->rom[addr];
 }
 
 // Returns a byte from the cartridge RAM at the given address.
-uint8_t __attribute__((section(".il_mem.text"))) gb_cart_ram_read(struct gb_s *gb, const uint_fast32_t addr)
+uint8_t __attribute__((section(".oc_mem.il.text"))) gb_cart_ram_read(struct gb_s *gb, const uint_fast32_t addr)
 {
   const emu_preferences *const p = (emu_preferences *)gb->direct.priv;
   return p->cart_ram[addr];
 }
 
 // Writes a given byte to the cartridge RAM at the given address.
-void __attribute__((section(".il_mem.text"))) gb_cart_ram_write(struct gb_s *gb, const uint_fast32_t addr, 
+void __attribute__((section(".oc_mem.il.text"))) gb_cart_ram_write(struct gb_s *gb, const uint_fast32_t addr, 
   const uint8_t val)
 {
   const emu_preferences *const p = (emu_preferences *)gb->direct.priv;
@@ -206,7 +212,7 @@ uint8_t prepare_emulator(struct gb_s *gb, emu_preferences *preferences)
 
   // Initialise emulator context
   gb_ret = gb_init(gb, &gb_rom_read, &gb_cart_ram_read, &gb_cart_ram_write,
-    &gb_error, preferences);
+    &gb_error, preferences, gb_wram, gb_vram, gb_oam, gb_hram_io);
   
   // Add ROM name to preference struct
   gb_get_rom_name(gb, preferences->current_rom_name);

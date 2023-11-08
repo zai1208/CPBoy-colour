@@ -38,21 +38,21 @@ SECTIONS {
   . = x_mem_addr;
 
   .x_mem : {
-    *(.x_mem)
+    *(oc_mem.x)
   }
   
   y_mem_addr = 0xE5017000;
   . = y_mem_addr;
 
   .y_mem : {
-    *(.y_mem)
+    *(oc_mem.y)
   }
   
   il_mem_addr = 0xE5200000;
   . = il_mem_addr;
 
   .il_mem : {
-    *(.il_mem.data)
-    *(.il_mem.text)
+    *(oc_mem.il.data)
+    *(oc_mem.il.text)
   }
 }

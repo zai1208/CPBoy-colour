@@ -48,10 +48,10 @@ clean:
 	rm -rf $(BUILDDIR) $(OUTDIR)
 
 $(APP_BIN): $(APP_ELF)
-	$(OBJCOPY) --remove-section=.il_mem* --remove-section=.x_mem* --remove-section=.y_mem* --output-target=binary $(APP_ELF) $@
+	$(OBJCOPY) --remove-section=.oc_mem* --output-target=binary $(APP_ELF) $@
 
 $(IL_BIN): $(APP_ELF) $(BINDIR)
-	$(OBJCOPY) --only-section=.il_mem* --output-target=binary $(APP_ELF) $@
+	$(OBJCOPY) --only-section=.oc_mem.il* --output-target=binary $(APP_ELF) $@
 
 $(APP_ELF): $(OBJECTS) $(SDK_DIR)/sdk.o linker.ld
 	mkdir -p $(dir $@)

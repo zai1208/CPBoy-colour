@@ -95,7 +95,6 @@
 
 /* Only include function prototypes. At least one file must *not* have this
  * defined. */
-// #define PEANUT_GB_HEADER_ONLY
 
 /** Internal source code. **/
 /* Interrupt masks */
@@ -360,8 +359,6 @@
 # endif
 #endif
 
-#ifndef PEANUT_GB_HEADER_ONLY
-
 #define IO_JOYP	0x00
 #define IO_SB	0x01
 #define IO_SC	0x02
@@ -396,18 +393,13 @@
 #define IO_STAT_MODE_SEARCH_TRANSFER	3
 #define IO_STAT_MODE_VBLANK_OR_TRANSFER_MASK 0x1
 
-/* Global arrays in OC-Memory. TODO: Do not do this here and use different sections for oc mem */
-uint8_t gb_wram[WRAM_SIZE];
-uint8_t gb_vram[VRAM_SIZE] __attribute__((section(".x_mem")));
-uint8_t gb_oam[OAM_SIZE] __attribute__((section(".y_mem")));
-uint8_t gb_hram_io[HRAM_IO_SIZE] __attribute__((section(".y_mem")));
-uint32_t lcd_pixels[LCD_WIDTH] __attribute__((section(".y_mem")));
+uint32_t lcd_pixels[LCD_WIDTH] __attribute__((section(".oc_mem.y")));
 
 /**
  * Internal function used to read bytes.
  * addr is host platform endian.
  */
-uint8_t __attribute__((section(".il_mem.text"))) __gb_read(struct gb_s *gb, uint16_t addr)
+uint8_t __attribute__((section(".oc_mem.il.text"))) __gb_read(struct gb_s *gb, uint16_t addr)
 {
 	switch(PEANUT_GB_GET_MSN16(addr))
 	{
@@ -516,7 +508,7 @@ uint8_t __attribute__((section(".il_mem.text"))) __gb_read(struct gb_s *gb, uint
 /**
  * Internal function used to write bytes.
  */
-void __attribute__((section(".il_mem.text"))) __gb_write(struct gb_s *gb, uint_fast16_t addr, uint8_t val)
+void __attribute__((section(".oc_mem.il.text"))) __gb_write(struct gb_s *gb, uint_fast16_t addr, uint8_t val)
 {
 	switch(PEANUT_GB_GET_MSN16(addr))
 	{
@@ -1063,7 +1055,7 @@ static int compare_sprites(const void *in1, const void *in2)
 }
 #endif
 
-void __attribute__((section(".il_mem.text"))) __gb_draw_line(struct gb_s *gb)
+void __attribute__((section(".oc_mem.il.text"))) __gb_draw_line(struct gb_s *gb)
 {
   emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
   palette selected_palette = preferences->palettes[preferences->config.selected_palette];
@@ -3113,7 +3105,7 @@ void __gb_step_cpu(struct gb_s *gb)
 	/* If halted, loop until an interrupt occurs. */
 }
 
-void __attribute__((section(".il_mem.text"))) gb_run_frame(struct gb_s *gb)
+void __attribute__((section(".oc_mem.il.text"))) gb_run_frame(struct gb_s *gb)
 {
 	gb->gb_frame = 0;
 
@@ -3247,7 +3239,11 @@ enum gb_init_error_e gb_init(struct gb_s *gb,
 			     uint8_t (*gb_cart_ram_read)(struct gb_s*, const uint_fast32_t),
 			     void (*gb_cart_ram_write)(struct gb_s*, const uint_fast32_t, const uint8_t),
 			     void (*gb_error)(struct gb_s*, const enum gb_error_e, const uint16_t),
-			     void *priv)
+			     void *priv,
+           uint8_t *wram,
+           uint8_t *vram,
+           uint8_t *oam,
+           uint8_t *hram_io)
 {
 	const uint16_t mbc_location = 0x0147;
 	const uint16_t bank_count_location = 0x0148;
@@ -3278,10 +3274,10 @@ enum gb_init_error_e gb_init(struct gb_s *gb,
 	};
 	const uint8_t num_ram_banks[] = { 0, 1, 1, 4, 16, 8 };
 
-  gb->wram = gb_wram;
-  gb->vram = gb_vram;
-  gb->oam = gb_oam;
-  gb->hram_io = gb_hram_io;
+  gb->wram = wram;
+  gb->vram = vram;
+  gb->oam = oam;
+  gb->hram_io = hram_io;
 
 	gb->gb_rom_read = gb_rom_read;
 	gb->gb_cart_ram_read = gb_cart_ram_read;
@@ -3427,150 +3423,6 @@ void gb_set_rtc(struct gb_s *gb, const struct tm * const time)
 	gb->cart_rtc[3] = time->tm_yday & 0xFF; /* Low 8 bits of day counter. */
 	gb->cart_rtc[4] = time->tm_yday >> 8; /* High 1 bit of day counter. */
 }
-#endif // PEANUT_GB_HEADER_ONLY
-
-/** Function prototypes: Required functions **/
-/**
- * Initialises the emulator context to a known state. Call this before calling
- * any other peanut-gb function.
- * To reset the emulator, you can call gb_reset() instead.
- *
- * \param gb	Allocated emulator context. Must not be NULL.
- * \param gb_rom_read Pointer to function that reads ROM data. ROM banking is
- * 		already handled by Peanut-GB. Must not be NULL.
- * \param gb_cart_ram_read Pointer to function that reads Cart RAM. Must not be
- * 		NULL.
- * \param gb_cart_ram_write Pointer to function to writes to Cart RAM. Must not
- * 		be NULL.
- * \param gb_error Pointer to function that is called when an unrecoverable
- *		error occurs. Must not be NULL. Returning from this
- *		function is undefined and will result in SIGABRT.
- * \param priv	Private data that is stored within the emulator context. Set to
- * 		NULL if unused.
- * \returns	0 on success or an enum that describes the error.
- */
-enum gb_init_error_e gb_init(struct gb_s *gb,
-			     uint8_t (*gb_rom_read)(struct gb_s*, const uint_fast32_t),
-			     uint8_t (*gb_cart_ram_read)(struct gb_s*, const uint_fast32_t),
-			     void (*gb_cart_ram_write)(struct gb_s*, const uint_fast32_t, const uint8_t),
-			     void (*gb_error)(struct gb_s*, const enum gb_error_e, const uint16_t),
-			     void *priv);
-
-/**
- * Executes the emulator and runs for one frame.
- *
- * \param	An initialised emulator context. Must not be NULL.
- */
-void gb_run_frame(struct gb_s *gb);
-
-/**
- * Internal function used to step the CPU. Used mainly for testing.
- * Use gb_run_frame() instead.
- *
- * \param	An initialised emulator context. Must not be NULL.
- */
-void __gb_step_cpu(struct gb_s *gb);
-
-/** Function prototypes: Optional Functions **/
-/**
- * Reset the emulator, like turning the Game Boy off and on again.
- * This function can be called at any time.
- *
- * \param	An initialised emulator context. Must not be NULL.
- */
-void gb_reset(struct gb_s *gb);
-
-/**
- * Initialises the display context of the emulator. Only available when
- * ENABLE_LCD is defined to a non-zero value.
- * The pixel data sent to lcd_draw_line comes with both shade and layer data.
- * The first two least significant bits are the shade data (black, dark, light,
- * white). Bits 4 and 5 are layer data (OBJ0, OBJ1, BG), which can be used to
- * add more colours to the game in the same way that the Game Boy Color does to
- * older Game Boy games.
- * This function can be called at any time.
- *
- * \param gb	An initialised emulator context. Must not be NULL.
- * \param lcd_draw_line Pointer to function that draws the 2-bit pixel data on the line
- *		"line". Must not be NULL.
- */
-#if ENABLE_LCD
-void gb_init_lcd(struct gb_s *gb,
-		void (*lcd_draw_line)(struct gb_s *gb,
-			const uint32_t *pixels,
-			const uint_fast8_t line));
-#endif
-
-/**
- * Initialises the serial connection of the emulator. This function is optional,
- * and if not called, the emulator will assume that no link cable is connected
- * to the game.
- *
- * \param gb	An initialised emulator context. Must not be NULL.
- * \param gb_serial_tx Pointer to function that transmits a byte of data over
- *		the serial connection. Must not be NULL.
- * \param gb_serial_rx Pointer to function that receives a byte of data over the
- *		serial connection. If no byte is received,
- *		return GB_SERIAL_RX_NO_CONNECTION. Must not be NULL.
- */
-void gb_init_serial(struct gb_s *gb,
-		    void (*gb_serial_tx)(struct gb_s*, const uint8_t),
-		    enum gb_serial_rx_ret_e (*gb_serial_rx)(struct gb_s*,
-			    uint8_t*));
-
-/**
- * Obtains the save size of the game (size of the Cart RAM). Required by the
- * frontend to allocate enough memory for the Cart RAM.
- *
- * \param gb	An initialised emulator context. Must not be NULL.
- * \returns	Size of the Cart RAM in bytes. 0 if Cartridge has not battery
- *		backed RAM.
- */
-uint_fast32_t gb_get_save_size(struct gb_s *gb);
-
-/**
- * Calculates and returns a hash of the game header in the same way the Game
- * Boy Color does for colourising old Game Boy games. The frontend can use this
- * hash to automatically set a colour palette.
- *
- * \param gb	An initialised emulator context. Must not be NULL.
- * \returns	Hash of the game header.
- */
-uint8_t gb_colour_hash(struct gb_s *gb);
-
-/**
- * Returns the title of ROM.
- *
- * \param gb	An initialised emulator context. Must not be NULL.
- * \param title_str Allocated string at least 16 characters.
- * \returns	Pointer to start of string, null terminated.
- */
-const char* gb_get_rom_name(struct gb_s* gb, char *title_str);
-
-/**
- * Tick the internal RTC by one second. This does not affect games with no RTC
- * support.
- *
- * \param gb	An initialised emulator context. Must not be NULL.
- */
-void gb_tick_rtc(struct gb_s *gb);
-
-/**
- * Set initial values in RTC.
- * Should be called after gb_init().
- *
- * \param gb	An initialised emulator context. Must not be NULL.
- * \param time	Time structure with date and time.
- */
-void gb_set_rtc(struct gb_s *gb, const struct tm * const time);
-
-/**
- * Use boot ROM on reset. gb_reset() must be called for this to take affect.
- * \param gb 	An initialised emulator context. Must not be NULL.
- * \param gb_bootrom_read Function pointer to read boot ROM binary.
- */
-void gb_set_bootrom(struct gb_s *gb,
-	uint8_t (*gb_bootrom_read)(struct gb_s*, const uint_fast16_t));
 
 /* Undefine CPU Flag helper functions. */
 #undef PEANUT_GB_CPUFLAG_MASK_CARRY

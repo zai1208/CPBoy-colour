@@ -520,7 +520,6 @@ uint8_t load_palettes(struct gb_s *gb)
       return 1;
     }
 
-    // TODO THIS ALREADY BREAKS
     if (process_palette_ini(ini_string, var_size, &(preferences->palettes[1 + has_game_palette + i]))) 
     {
       return 1;
