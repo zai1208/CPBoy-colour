@@ -394,7 +394,7 @@
 #define IO_STAT_MODE_VBLANK_OR_TRANSFER_MASK 0x1
 
 /* Two pixel arrays for double buffering */
-uint32_t lcd_pixels[2][LCD_WIDTH] __attribute__((section(".oc_mem.y")));
+uint32_t lcd_pixels[2][LCD_WIDTH] __attribute__((section(".oc_mem.y.data")));
 
 /**
  * Internal function used to read bytes.
@@ -482,7 +482,7 @@ uint8_t __attribute__((section(".oc_mem.il.text"))) __gb_read(struct gb_s *gb, u
 #if ENABLE_SOUND
 			return audio_read(addr);
 #else
-			static const uint8_t ortab[] = {
+			static const uint8_t __attribute__((section(".oc_mem.y.text"))) ortab[] = {
 				0x80, 0x3f, 0x00, 0xff, 0xbf,
 				0xff, 0x3f, 0x00, 0xff, 0xbf,
 				0x7f, 0xff, 0x9f, 0xff, 0xbf,
@@ -1382,7 +1382,7 @@ void __gb_step_cpu(struct gb_s *gb)
 {
 	uint8_t opcode;
 	uint_fast16_t inst_cycles;
-	static const uint8_t op_cycles[0x100] =
+	static const uint8_t __attribute__((section(".oc_mem.y.text"))) op_cycles[0x100] =
 	{
 		/* *INDENT-OFF* */
 		/*0 1 2  3  4  5  6  7  8  9  A  B  C  D  E  F	*/
@@ -1404,7 +1404,7 @@ void __gb_step_cpu(struct gb_s *gb)
 		12,12,8, 4, 0,16, 8,16,12, 8,16, 4, 0, 0, 8,16	/* 0xF0 */
 		/* *INDENT-ON* */
 	};
-	static const uint_fast16_t TAC_CYCLES[4] = {1024, 16, 64, 256};
+	static const uint_fast16_t __attribute__((section(".oc_mem.y.text"))) TAC_CYCLES[4] = {1024, 16, 64, 256};
 
 	/* Handle interrupts */
 	/* If gb_halt is positive, then an interrupt must have occurred by the

@@ -45,7 +45,8 @@ SECTIONS {
   . = y_mem_addr;
 
   .oc_mem.y : {
-    *(.oc_mem.y)
+    *(.oc_mem.y.text)
+    *(.oc_mem.y.data)
   }
   
   il_mem_addr = 0xE5200000;

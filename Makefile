@@ -1,7 +1,6 @@
 # run `make all` to compile the .hhk and .bin file, use `make` to compile only the .bin file.
 # The .hhk file is the original format, the bin file is a newer format.
 APP_NAME:=CPBoy
-IL_NAME:=il
 
 ifndef SDK_DIR
 $(error You need to define the SDK_DIR environment variable, and point it to the sdk/ folder)
@@ -36,13 +35,14 @@ OBJECTS := $(addprefix $(BUILDDIR)/,$(AS_SOURCES:.s=.o)) \
 
 APP_ELF:=$(OUTDIR)/$(APP_NAME).elf
 APP_BIN:=$(OUTDIR)/$(APP_NAME).bin
-IL_BIN:=$(BINDIR)/$(IL_NAME).bin
+IL_BIN:=$(BINDIR)/il.bin
+Y_BIN:=$(BINDIR)/y.bin
 
-bin: $(APP_BIN) $(IL_BIN) Makefile
+bin: $(APP_BIN) $(IL_BIN) $(Y_BIN) Makefile
 
 hhk: $(APP_ELF) Makefile
 
-all: $(APP_ELF) $(APP_BIN) $(IL_BIN) Makefile
+all: $(APP_ELF) $(APP_BIN) $(IL_BIN) $(Y_BIN) Makefile
 
 clean:
 	rm -rf $(BUILDDIR) $(OUTDIR)
@@ -52,6 +52,9 @@ $(APP_BIN): $(APP_ELF)
 
 $(IL_BIN): $(APP_ELF) $(BINDIR)
 	$(OBJCOPY) --only-section=.oc_mem.il* --output-target=binary $(APP_ELF) $@
+	
+$(Y_BIN): $(APP_ELF) $(BINDIR)
+	$(OBJCOPY) --only-section=.oc_mem.y* --output-target=binary $(APP_ELF) $@
 
 $(APP_ELF): $(OBJECTS) $(SDK_DIR)/sdk.o linker.ld
 	mkdir -p $(dir $@)

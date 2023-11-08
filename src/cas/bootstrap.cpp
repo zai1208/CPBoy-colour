@@ -11,11 +11,13 @@
 
 // All external binaries have to be defined here
 const char *bin_files[] = {
-  "il.bin"
+  "il.bin",
+  "y.bin"
 };
 
 void *load_addresses[] = {
-  IL_MEMORY
+  IL_MEMORY,
+  Y_MEMORY_0
 };
 
 uint8_t load_bins(const char **bin_files, void **load_addresses, size_t bin_count);
