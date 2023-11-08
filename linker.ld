@@ -37,22 +37,22 @@ SECTIONS {
   x_mem_addr = 0xE5007000;
   . = x_mem_addr;
 
-  .x_mem : {
-    *(oc_mem.x)
+  .oc_mem.x : {
+    *(.oc_mem.x)
   }
   
   y_mem_addr = 0xE5017000;
   . = y_mem_addr;
 
-  .y_mem : {
-    *(oc_mem.y)
+  .oc_mem.y : {
+    *(.oc_mem.y)
   }
   
   il_mem_addr = 0xE5200000;
   . = il_mem_addr;
 
-  .il_mem : {
-    *(oc_mem.il.data)
-    *(oc_mem.il.text)
+  .oc_mem.il : {
+    *(.oc_mem.il.data)
+    *(.oc_mem.il.text)
   }
 }
