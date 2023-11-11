@@ -13,6 +13,8 @@
 #include "cart_ram.h"
 #include "../cas/display.h"
 #include "../cas/cpu/dmac.h"
+#include "../cas/cpu/oc_mem.h"
+#include "../cas/cpu/stack.h"
 #include "../emu_ui/menu/menu.h"
 #include "../helpers/macros.h"
 #include "../helpers/functions.h"
@@ -20,6 +22,10 @@
 
 #define INPUT_NONE      0
 #define INPUT_OPEN_MENU 1
+
+#define STACK_PTR_ADDR  (void *)((uint32_t)Y_MEMORY_1 + (0x1000 - 4))
+
+void *stack_ptr_bak;
 
 /* Global arrays in OC-Memory */
 uint8_t gb_wram[WRAM_SIZE];
@@ -301,6 +307,10 @@ uint8_t close_rom(struct gb_s *gb)
 
 uint8_t execute_rom(struct gb_s *gb) 
 {
+  // Set stack pointer into OC-Mem to speed up stack operations
+  stack_ptr_bak = get_stack_ptr();
+  set_stack_ptr(STACK_PTR_ADDR);
+
   emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
   bool refreshed_lcd = false;
 
@@ -337,16 +347,21 @@ uint8_t execute_rom(struct gb_s *gb)
     // Check if pause menu should be displayed
     if (unlikely(preferences->emulator_paused && refreshed_lcd))
     {
+      void *tmp_stack_ptr_bak = get_stack_ptr();
+      set_stack_ptr(stack_ptr_bak);
+
       uint8_t menu_code = emulation_menu(gb, false);
 
       if (menu_code != MENU_CLOSED)
       {
+        set_stack_ptr(stack_ptr_bak);
         return menu_code;
       }
 
       preferences->emulator_paused = false;
 
       LCD_Refresh();
+      set_stack_ptr(tmp_stack_ptr_bak);
     }
 
     // Handle input
