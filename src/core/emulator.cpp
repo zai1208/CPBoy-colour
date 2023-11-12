@@ -25,7 +25,7 @@
 
 #define STACK_PTR_ADDR  (void *)((uint32_t)Y_MEMORY_1 + (0x1000 - 4))
 
-void *stack_ptr_bak;
+bool refreshed_lcd;
 
 /* Global arrays in OC-Memory */
 uint8_t gb_wram[WRAM_SIZE];
@@ -117,6 +117,15 @@ void lcd_draw_line(struct gb_s *gb, const uint32_t pixels[160],
 {
   emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
 
+  // Wait for previous DMA to complete
+  dma_wait(DMAC_CHCR_0);
+
+  if (unlikely(line == 0))
+  {
+    refreshed_lcd = true;
+    prepare_gb_lcd();
+  }
+
   // When emulator will be paused, render a full frame in vram
   if (unlikely(preferences->emulator_paused))
   {
@@ -128,9 +137,6 @@ void lcd_draw_line(struct gb_s *gb, const uint32_t pixels[160],
 
     return;
   }
-
-  // Wait for previous DMA to complete
-  dma_wait(DMAC_CHCR_0);
 
   // Initialize DMA settings
   dmac_chcr tmp_chcr = { .raw = 0 };
@@ -307,12 +313,7 @@ uint8_t close_rom(struct gb_s *gb)
 
 uint8_t execute_rom(struct gb_s *gb) 
 {
-  // Set stack pointer into OC-Mem to speed up stack operations
-  stack_ptr_bak = get_stack_ptr();
-  set_stack_ptr(STACK_PTR_ADDR);
-
   emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
-  bool refreshed_lcd = false;
 
   for (;;)
   {
@@ -322,46 +323,29 @@ uint8_t execute_rom(struct gb_s *gb)
       gb_tick_rtc(gb);
     }
 
-    // Check if display should be updated
-    if(gb->direct.frame_skip)
-    {
-      if ((gb->display.frame_count % gb->direct.frame_skip_amount) == 0)
-      {
-        prepare_gb_lcd();
-        refreshed_lcd = true;
-      }
-      else
-      {
-        refreshed_lcd = false;
-      }
-    }
-    else
-    {
-      prepare_gb_lcd();
-      refreshed_lcd = true;
-    }
+    refreshed_lcd = false;
+
+    void *tmp_stack_ptr_bak = get_stack_ptr(); 
+    set_stack_ptr(STACK_PTR_ADDR);
 
     // Run CPU until next frame
     gb_run_frame(gb);
 
+    set_stack_ptr(tmp_stack_ptr_bak);
+
     // Check if pause menu should be displayed
     if (unlikely(preferences->emulator_paused && refreshed_lcd))
     {
-      void *tmp_stack_ptr_bak = get_stack_ptr();
-      set_stack_ptr(stack_ptr_bak);
-
       uint8_t menu_code = emulation_menu(gb, false);
 
       if (menu_code != MENU_CLOSED)
       {
-        set_stack_ptr(stack_ptr_bak);
         return menu_code;
       }
 
       preferences->emulator_paused = false;
 
       LCD_Refresh();
-      set_stack_ptr(tmp_stack_ptr_bak);
     }
 
     // Handle input
