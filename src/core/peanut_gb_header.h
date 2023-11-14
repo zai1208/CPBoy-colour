@@ -500,34 +500,6 @@ enum gb_serial_rx_ret_e
 struct gb_s
 {
   /**
-   * Return byte from ROM at given address.
-   *
-   * \param gb_s	emulator context
-   * \param addr	address
-   * \return		byte at address in ROM
-   */
-  uint8_t (*gb_rom_read)(struct gb_s*, const uint_fast32_t addr);
-
-  /**
-   * Return byte from cart RAM at given address.
-   *
-   * \param gb_s	emulator context
-   * \param addr	address
-   * \return		byte at address in RAM
-   */
-  uint8_t (*gb_cart_ram_read)(struct gb_s*, const uint_fast32_t addr);
-
-  /**
-   * Write byte to cart RAM at given address.
-   *
-   * \param gb_s	emulator context
-   * \param addr	address
-   * \param val	value to write to address in RAM
-   */
-  void (*gb_cart_ram_write)(struct gb_s*, const uint_fast32_t addr,
-          const uint8_t val);
-
-  /**
    * Notify front-end of error.
    *
    * \param gb_s		emulator context
@@ -584,11 +556,14 @@ struct gb_s
   //struct gb_registers_s gb_reg;
   struct count_s counter;
 
-  /* TODO: Allow implementation to allocate WRAM, VRAM and Frame Buffer. */
   uint8_t *wram;
   uint8_t *vram;
   uint8_t *oam;
   uint8_t *hram_io;
+  uint8_t *rom;
+  uint8_t *cram;
+
+  uint8_t *memory_map[0x10];
 
   struct
   {
@@ -685,15 +660,13 @@ struct gb_s
  * \returns	0 on success or an enum that describes the error.
  */
 enum gb_init_error_e gb_init(struct gb_s *gb,
-          uint8_t (*gb_rom_read)(struct gb_s*, const uint_fast32_t),
-          uint8_t (*gb_cart_ram_read)(struct gb_s*, const uint_fast32_t),
-          void (*gb_cart_ram_write)(struct gb_s*, const uint_fast32_t, const uint8_t),
           void (*gb_error)(struct gb_s*, const enum gb_error_e, const uint16_t),
           void *priv,
           uint8_t *wram,
           uint8_t *vram,
           uint8_t *oam,
-          uint8_t *hram_io
+          uint8_t *hram_io,
+          uint8_t *rom
         );
 
 /**
@@ -811,3 +784,5 @@ void gb_set_rtc(struct gb_s *gb, const struct tm * const time);
  */
 void gb_set_bootrom(struct gb_s *gb,
   uint8_t (*gb_bootrom_read)(struct gb_s*, const uint_fast16_t));
+
+void gb_set_cram(struct gb_s *gb, uint8_t *cram);

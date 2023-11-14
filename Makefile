@@ -9,14 +9,18 @@ endif
 AS:=sh4-elf-as
 AS_FLAGS:=
 
+COMMON_FLAGS:=-ffreestanding -fshort-wchar -O2 -m4a-nofpu 
+INCLUDES:=-I $(SDK_DIR)/include/ -I $(SDK_DIR)/newlib/sh-elf/include
+WARNINGS:=-Wall -Wextra
+
 CC:=sh4-elf-gcc
-CC_FLAGS:=-ffreestanding -fshort-wchar -Wall -Wextra -O3 -I $(SDK_DIR)/include/ -m4a-nofpu
+CC_FLAGS:=$(COMMON_FLAGS) $(INCLUDES) $(WARNINGS)
 
 CXX:=sh4-elf-g++
-CXX_FLAGS:=-ffreestanding -fno-exceptions -fno-rtti -fshort-wchar -Wall -Wextra -Wno-write-strings -O3 -I $(SDK_DIR)/include/ -m4a-nofpu -I $(SDK_DIR)/newlib/sh-elf/include
+CXX_FLAGS:=-fno-exceptions -fno-rtti -Wno-write-strings $(COMMON_FLAGS) $(INCLUDES) $(WARNINGS)
 
 LD:=sh4-elf-gcc
-LD_FLAGS:=-nostartfiles -m4-nofpu -Wno-undef -L$(SDK_DIR)/newlib/sh-elf/lib
+LD_FLAGS:=-nostartfiles -m4a-nofpu -Wno-undef -L$(SDK_DIR)/newlib/sh-elf/lib
 
 READELF:=sh4-elf-readelf
 OBJCOPY:=sh4-elf-objcopy
@@ -50,10 +54,12 @@ clean:
 $(APP_BIN): $(APP_ELF)
 	$(OBJCOPY) --remove-section=.oc_mem* --output-target=binary $(APP_ELF) $@
 
-$(IL_BIN): $(APP_ELF) $(BINDIR)
+$(IL_BIN): $(APP_ELF)
+	mkdir -p $(dir $@)
 	$(OBJCOPY) --only-section=.oc_mem.il* --output-target=binary $(APP_ELF) $@
 	
-$(Y_BIN): $(APP_ELF) $(BINDIR)
+$(Y_BIN): $(APP_ELF)
+	mkdir -p $(dir $@)
 	$(OBJCOPY) --only-section=.oc_mem.y* --output-target=binary $(APP_ELF) $@
 
 $(APP_ELF): $(OBJECTS) $(SDK_DIR)/sdk.o linker.ld
@@ -83,11 +89,5 @@ $(BUILDDIR)/%.o: %.cpp
 	mkdir -p $(dir $@)
 	$(CXX) -c $< -o $@ $(CXX_FLAGS)
 	@$(READELF) $@ -S | grep ".ctors" > /dev/null && echo "ERROR: Global constructors aren't supported." && rm $@ && exit 1 || exit 0
-
-$(BINDIR):
-	mkdir -p $@
-
-$(OUTDIR):
-	mkdir -p $@
 
 .PHONY: bin hhk all clean

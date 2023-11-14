@@ -161,28 +161,6 @@ void lcd_draw_line(struct gb_s *gb, const uint32_t pixels[160],
   DMAC_CHCR_0->raw = tmp_chcr.raw;
 }
 
-// Returns a byte from the ROM file at the given address.
-uint8_t __attribute__((section(".oc_mem.il.text"))) gb_rom_read(struct gb_s *gb, const uint_fast32_t addr)
-{
-  const emu_preferences *const p = (emu_preferences *)gb->direct.priv;
-  return p->rom[addr];
-}
-
-// Returns a byte from the cartridge RAM at the given address.
-uint8_t __attribute__((section(".oc_mem.il.text"))) gb_cart_ram_read(struct gb_s *gb, const uint_fast32_t addr)
-{
-  const emu_preferences *const p = (emu_preferences *)gb->direct.priv;
-  return p->cart_ram[addr];
-}
-
-// Writes a given byte to the cartridge RAM at the given address.
-void __attribute__((section(".oc_mem.il.text"))) gb_cart_ram_write(struct gb_s *gb, const uint_fast32_t addr, 
-  const uint8_t val)
-{
-  const emu_preferences *const p = (emu_preferences *)gb->direct.priv;
-  p->cart_ram[addr] = val;
-}
-
 // Handles an error reported by the emulator. The emulator context may be used
 // to better understand why the error given in gb_err was reported.
 // TODO: Correctly implement this
@@ -221,8 +199,7 @@ uint8_t prepare_emulator(struct gb_s *gb, emu_preferences *preferences)
   enum gb_init_error_e gb_ret;
 
   // Initialise emulator context
-  gb_ret = gb_init(gb, &gb_rom_read, &gb_cart_ram_read, &gb_cart_ram_write,
-    &gb_error, preferences, gb_wram, gb_vram, gb_oam, gb_hram_io);
+  gb_ret = gb_init(gb, &gb_error, preferences, gb_wram, gb_vram, gb_oam, gb_hram_io, preferences->rom);
   
   // Add ROM name to preference struct
   gb_get_rom_name(gb, preferences->current_rom_name);
@@ -259,6 +236,7 @@ uint8_t prepare_emulator(struct gb_s *gb, emu_preferences *preferences)
 
   // Load cart save
   load_cart_ram(gb);
+  gb_set_cram(gb, preferences->cart_ram);
 
   // Load user configs
   load_rom_config(gb);

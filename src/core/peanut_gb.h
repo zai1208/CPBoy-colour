@@ -396,78 +396,61 @@
 /* Two pixel arrays for double buffering */
 uint32_t lcd_pixels[2][LCD_WIDTH] __attribute__((section(".oc_mem.y.data")));
 
+void __attribute__((section(".oc_mem.il.text"))) __set_rom_bank(struct gb_s *gb)
+{
+	uint8_t mask = 0xFF;
+
+	if(gb->mbc == 1 && gb->cart_mode_select)
+	{
+		mask = 0x1F;
+	}
+
+	gb->memory_map[0x4] = gb->rom + ((gb->selected_rom_bank & mask) * ROM_BANK_SIZE);
+	gb->memory_map[0x5] = gb->memory_map[0x4] + 0x1000;
+	gb->memory_map[0x6] = gb->memory_map[0x4] + 0x2000;
+	gb->memory_map[0x7] = gb->memory_map[0x4] + 0x3000;
+}
+
+void __attribute__((section(".oc_mem.il.text"))) __set_cram_bank(struct gb_s *gb)
+{
+	uint8_t *cram = gb->wram;
+
+	if(gb->mbc == 3 && gb->cart_ram_bank >= 0x08)
+	{
+		/* This will definitely introduce problems, but lets try it anyway */
+		cram = gb->cart_rtc + (gb->cart_ram_bank - 0x08);
+	}
+	else if(gb->cart_ram && gb->enable_cart_ram)
+	{
+		if(gb->mbc == 2)
+		{
+			/* Only 9 bits are available in address. */
+			/* WILL BE IGNORED, COULD INTRODUCE PROBLEMS */
+			cram = gb->cram;
+		}
+		else if((gb->cart_mode_select || gb->mbc != 1) &&
+				gb->cart_ram_bank < gb->num_ram_banks)
+		{
+			cram = gb->cram + (gb->cart_ram_bank * CRAM_BANK_SIZE);
+		}
+		else
+			cram = gb->cram;
+	}
+
+	gb->memory_map[0xA] = cram;
+	gb->memory_map[0xB] = gb->memory_map[0xA] + 0x1000;
+}
+
 /**
  * Internal function used to read bytes.
  * addr is host platform endian.
  */
 uint8_t __attribute__((section(".oc_mem.il.text"))) __gb_read(struct gb_s *gb, uint16_t addr)
 {
-	switch(PEANUT_GB_GET_MSN16(addr))
+	if (PEANUT_GB_GET_MSN16(addr) == 0xF)
 	{
-	case 0x0:
-		/* IO_BANK is only set to 1 if gb->gb_bootrom_read was not NULL
-		 * on reset. */
-		if(gb->hram_io[IO_BANK] == 0 && addr < 0x0100)
-		{
-			return gb->gb_bootrom_read(gb, addr);
-		}
-
-		/* Fallthrough */
-	case 0x1:
-	case 0x2:
-	case 0x3:
-		return gb->gb_rom_read(gb, addr);
-
-	case 0x4:
-	case 0x5:
-	case 0x6:
-	case 0x7:
-		if(gb->mbc == 1 && gb->cart_mode_select)
-			return gb->gb_rom_read(gb,
-					       addr + ((gb->selected_rom_bank & 0x1F) - 1) * ROM_BANK_SIZE);
-		else
-			return gb->gb_rom_read(gb, addr + (gb->selected_rom_bank - 1) * ROM_BANK_SIZE);
-
-	case 0x8:
-	case 0x9:
-		return gb->vram[addr - VRAM_ADDR];
-
-	case 0xA:
-	case 0xB:
-		if(gb->mbc == 3 && gb->cart_ram_bank >= 0x08)
-		{
-			return gb->cart_rtc[gb->cart_ram_bank - 0x08];
-		}
-		else if(gb->cart_ram && gb->enable_cart_ram)
-		{
-			if(gb->mbc == 2)
-			{
-				/* Only 9 bits are available in address. */
-				addr &= 0x1FF;
-				return gb->gb_cart_ram_read(gb, addr);
-			}
-			else if((gb->cart_mode_select || gb->mbc != 1) &&
-					gb->cart_ram_bank < gb->num_ram_banks)
-			{
-				return gb->gb_cart_ram_read(gb, addr - CART_RAM_ADDR +
-							    (gb->cart_ram_bank * CRAM_BANK_SIZE));
-			}
-			else
-				return gb->gb_cart_ram_read(gb, addr - CART_RAM_ADDR);
-		}
-
-		return 0xFF;
-
-	case 0xC:
-	case 0xD:
-		return gb->wram[addr - WRAM_0_ADDR];
-
-	case 0xE:
-		return gb->wram[addr - ECHO_ADDR];
-
-	case 0xF:
 		if(addr < OAM_ADDR)
-			return gb->wram[addr - ECHO_ADDR];
+			goto normal_read;
 
 		if(addr < UNUSED_ADDR)
 			return gb->oam[addr - OAM_ADDR];
@@ -501,9 +484,8 @@ uint8_t __attribute__((section(".oc_mem.il.text"))) __gb_read(struct gb_s *gb, u
 			return gb->hram_io[addr - IO_ADDR];
 	}
 
-	/* Return address that caused read error. */
-	(gb->gb_error)(gb, GB_INVALID_READ, addr);
-	PGB_UNREACHABLE();
+normal_read:
+	return gb->memory_map[PEANUT_GB_GET_MSN16(addr)][addr & 0xFFF];
 }
 
 /**
@@ -519,6 +501,7 @@ void __attribute__((section(".oc_mem.il.text"))) __gb_write(struct gb_s *gb, uin
 		if(gb->mbc > 0 && gb->mbc != 2 && gb->cart_ram)
 		{
 			gb->enable_cart_ram = ((val & 0x0F) == 0x0A);
+			__set_cram_bank(gb);
 			return;
 		}
 
@@ -529,6 +512,7 @@ void __attribute__((section(".oc_mem.il.text"))) __gb_write(struct gb_s *gb, uin
 			gb->selected_rom_bank = (gb->selected_rom_bank & 0x100) | val;
 			gb->selected_rom_bank =
 				gb->selected_rom_bank & gb->num_rom_banks_mask;
+			__set_rom_bank(gb);
 			return;
 		}
 
@@ -556,6 +540,7 @@ void __attribute__((section(".oc_mem.il.text"))) __gb_write(struct gb_s *gb, uin
 			else
 			{
 				gb->enable_cart_ram = ((val & 0x0F) == 0x0A);
+				__set_cram_bank(gb);
 				return;
 			}
 		}
@@ -570,6 +555,7 @@ void __attribute__((section(".oc_mem.il.text"))) __gb_write(struct gb_s *gb, uin
 			gb->selected_rom_bank = (val & 0x01) << 8 | (gb->selected_rom_bank & 0xFF);
 
 		gb->selected_rom_bank = gb->selected_rom_bank & gb->num_rom_banks_mask;
+		__set_rom_bank(gb);
 		return;
 
 	case 0x4:
@@ -585,64 +571,29 @@ void __attribute__((section(".oc_mem.il.text"))) __gb_write(struct gb_s *gb, uin
 		else if(gb->mbc == 5)
 			gb->cart_ram_bank = (val & 0x0F);
 
+		__set_rom_bank(gb);
+		__set_cram_bank(gb);
 		return;
 
 	case 0x6:
 	case 0x7:
 		gb->cart_mode_select = (val & 1);
+		__set_cram_bank(gb);
 		return;
 
 	case 0x8:
 	case 0x9:
-		gb->vram[addr - VRAM_ADDR] = val;
-		return;
-
 	case 0xA:
 	case 0xB:
-		if(gb->mbc == 3 && gb->cart_ram_bank >= 0x08)
-		{
-			gb->cart_rtc[gb->cart_ram_bank - 0x08] = val;
-		}
-		/* Do not write to RAM if unavailable or disabled. */
-		else if(gb->cart_ram && gb->enable_cart_ram)
-		{
-			if(gb->mbc == 2)
-			{
-				/* Only 9 bits are available in address. */
-				addr &= 0x1FF;
-				/* Data is only 4 bits wide in MBC2 RAM. */
-				val &= 0x0F;
-				gb->gb_cart_ram_write(gb, addr, val);
-			}
-			else if(gb->cart_mode_select &&
-					gb->cart_ram_bank < gb->num_ram_banks)
-			{
-				gb->gb_cart_ram_write(gb,
-						      addr - CART_RAM_ADDR + (gb->cart_ram_bank * CRAM_BANK_SIZE), val);
-			}
-			else if(gb->num_ram_banks)
-				gb->gb_cart_ram_write(gb, addr - CART_RAM_ADDR, val);
-		}
-
-		return;
-
 	case 0xC:
-		gb->wram[addr - WRAM_0_ADDR] = val;
-		return;
-
 	case 0xD:
-		gb->wram[addr - WRAM_1_ADDR + WRAM_BANK_SIZE] = val;
-		return;
-
 	case 0xE:
-		gb->wram[addr - ECHO_ADDR] = val;
-		return;
+    goto normal_write;
 
 	case 0xF:
 		if(addr < OAM_ADDR)
 		{
-			gb->wram[addr - ECHO_ADDR] = val;
-			return;
+      goto normal_write;
 		}
 
 		if(addr < UNUSED_ADDR)
@@ -834,9 +785,9 @@ void __attribute__((section(".oc_mem.il.text"))) __gb_write(struct gb_s *gb, uin
 			return;
 		}
 	}
-
-	/* Invalid writes are ignored. */
-	return;
+  
+normal_write:
+  gb->memory_map[PEANUT_GB_GET_MSN16(addr)][addr & 0xFFF] = val;
 }
 
 uint8_t __gb_execute_cb(struct gb_s *gb)
@@ -855,12 +806,12 @@ uint8_t __gb_execute_cb(struct gb_s *gb)
 	{
 	case 0x06:
 	case 0x86:
-    	case 0xC6:
+  case 0xC6:
 		inst_cycles += 8;
-    	break;
-    	case 0x46:
+    break;
+  case 0x46:
 		inst_cycles += 4;
-    	break;
+    break;
 	}
 
 	switch(r)
@@ -1058,11 +1009,11 @@ static int compare_sprites(const void *in1, const void *in2)
 
 void __attribute__((section(".oc_mem.il.text"))) __gb_draw_line(struct gb_s *gb)
 {
-  emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
-  palette selected_palette = preferences->palettes[preferences->config.selected_palette];
+	emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
+	palette selected_palette = preferences->palettes[preferences->config.selected_palette];
 
-  /* Select which buffer to use for the current line */
-  uint32_t *pixels = lcd_pixels[gb->hram_io[IO_LY] % 2];
+	/* Select which buffer to use for the current line */
+	uint32_t *pixels = lcd_pixels[gb->hram_io[IO_LY] % 2];
 
 	/* If LCD not initialised by front-end, don't render anything. */
 	if(gb->display.lcd_draw_line == NULL)
@@ -1078,7 +1029,7 @@ void __attribute__((section(".oc_mem.il.text"))) __gb_draw_line(struct gb_s *gb)
 		if((gb->display.interlace_count == 0
 				&& (gb->hram_io[IO_LY] & 1) == 0)
 				|| (gb->display.interlace_count == 1
-				    && (gb->hram_io[IO_LY] & 1) == 1))
+						&& (gb->hram_io[IO_LY] & 1) == 1))
 		{
 			/* Compensate for missing window draw if required. */
 			if(gb->hram_io[IO_LCDC] & LCDC_WINDOW_ENABLE
@@ -1179,7 +1130,7 @@ void __attribute__((section(".oc_mem.il.text"))) __gb_draw_line(struct gb_s *gb)
 
 		/* Calculate Window Map Address. */
 		win_line = (gb->hram_io[IO_LCDC] & LCDC_WINDOW_MAP) ?
-				    VRAM_BMAP_2 : VRAM_BMAP_1;
+						VRAM_BMAP_2 : VRAM_BMAP_1;
 		win_line += (gb->display.window_clear >> 3) * 0x20;
 
 		disp_x = LCD_WIDTH - 1;
@@ -1302,7 +1253,7 @@ void __attribute__((section(".oc_mem.il.text"))) __gb_draw_line(struct gb_s *gb)
 			uint8_t OX = gb->oam[4 * s + 1];
 			/* Sprite Tile/Pattern Number. */
 			uint8_t OT = gb->oam[4 * s + 2]
-				     & (gb->hram_io[IO_LCDC] & LCDC_OBJ_SIZE ? 0xFE : 0xFF);
+						 & (gb->hram_io[IO_LCDC] & LCDC_OBJ_SIZE ? 0xFE : 0xFF);
 			/* Additional attributes. */
 			uint8_t OF = gb->oam[4 * s + 3];
 
@@ -1362,7 +1313,7 @@ void __attribute__((section(".oc_mem.il.text"))) __gb_draw_line(struct gb_s *gb)
 					pixels[disp_x] = (OF & OBJ_PALETTE)
 						? selected_palette.data[(LCD_PALETTE_OBJ >> 2)][gb->display.sp_palette[c + 4]]
 						: selected_palette.data[(LCD_PALETTE_OBJ >> 2) - 1][gb->display.sp_palette[c]];
-          pixels[disp_x] += (pixels[disp_x] << 16);
+					pixels[disp_x] += (pixels[disp_x] << 16);
 				}
 
 				t1 = t1 >> 1;
@@ -2138,7 +2089,7 @@ void __gb_step_cpu(struct gb_s *gb)
 			if((gb->hram_io[IO_STAT] & STAT_MODE) == IO_STAT_MODE_HBLANK)
 			{
 				lcd_cycles = LCD_MODE_2_CYCLES -
-					     gb->counter.lcd_count;
+							 gb->counter.lcd_count;
 			}
 			else if((gb->hram_io[IO_STAT] & STAT_MODE) == IO_STAT_MODE_SEARCH_OAM)
 			{
@@ -2759,7 +2710,7 @@ void __gb_step_cpu(struct gb_s *gb)
 
 	case 0xE0: /* LD (0xFF00+imm), A */
 		__gb_write(gb, 0xFF00 | __gb_read(gb, gb->cpu_reg.pc.reg++),
-			   gb->cpu_reg.a);
+				 gb->cpu_reg.a);
 		break;
 
 	case 0xE1: /* POP HL */
@@ -2854,8 +2805,8 @@ void __gb_step_cpu(struct gb_s *gb)
 	case 0xF5: /* PUSH AF */
 		__gb_write(gb, --gb->cpu_reg.sp.reg, gb->cpu_reg.a);
 		__gb_write(gb, --gb->cpu_reg.sp.reg,
-			   gb->cpu_reg.f_bits.z << 7 | gb->cpu_reg.f_bits.n << 6 |
-			   gb->cpu_reg.f_bits.h << 5 | gb->cpu_reg.f_bits.c << 4);
+				 gb->cpu_reg.f_bits.z << 7 | gb->cpu_reg.f_bits.n << 6 |
+				 gb->cpu_reg.f_bits.h << 5 | gb->cpu_reg.f_bits.c << 4);
 		break;
 
 	case 0xF6: /* OR imm */
@@ -2877,7 +2828,7 @@ void __gb_step_cpu(struct gb_s *gb)
 		gb->cpu_reg.f_bits.n = 0;
 		gb->cpu_reg.f_bits.h = ((gb->cpu_reg.sp.reg & 0xF) + (offset & 0xF) > 0xF) ? 1 : 0;
 		gb->cpu_reg.f_bits.c = ((gb->cpu_reg.sp.reg & 0xFF) + (offset & 0xFF) > 0xFF) ? 1 :
-				       0;
+							 0;
 		break;
 	}
 
@@ -3042,7 +2993,7 @@ void __gb_step_cpu(struct gb_s *gb)
 #if ENABLE_LCD
 				/* If frame skip is activated, check if we need to draw
 				 * the frame or skip it. */
-        gb->display.frame_count++;
+				gb->display.frame_count++;
 
 				/* If interlaced is activated, change which lines get
 				 * updated. Also, only update lines on frames that are
@@ -3127,7 +3078,7 @@ uint_fast32_t gb_get_save_size(struct gb_s *gb)
 	{
 		0x00, 0x800, 0x2000, 0x8000, 0x20000
 	};
-	uint8_t ram_size = gb->gb_rom_read(gb, ram_size_location);
+	uint8_t ram_size = gb->rom[ram_size_location];
 
 	/* MBC2 always has 512 half-bytes of cart RAM. */
 	if(gb->mbc == 2)
@@ -3137,9 +3088,9 @@ uint_fast32_t gb_get_save_size(struct gb_s *gb)
 }
 
 void gb_init_serial(struct gb_s *gb,
-		    void (*gb_serial_tx)(struct gb_s*, const uint8_t),
-		    enum gb_serial_rx_ret_e (*gb_serial_rx)(struct gb_s*,
-			    uint8_t*))
+				void (*gb_serial_tx)(struct gb_s*, const uint8_t),
+				enum gb_serial_rx_ret_e (*gb_serial_rx)(struct gb_s*,
+					uint8_t*))
 {
 	gb->gb_serial_tx = gb_serial_tx;
 	gb->gb_serial_rx = gb_serial_rx;
@@ -3154,7 +3105,7 @@ uint8_t gb_colour_hash(struct gb_s *gb)
 	uint16_t i;
 
 	for(i = ROM_TITLE_START_ADDR; i <= ROM_TITLE_END_ADDR; i++)
-		x += gb->gb_rom_read(gb, i);
+		x += gb->rom[i];
 
 	return x;
 }
@@ -3173,11 +3124,30 @@ void gb_reset(struct gb_s *gb)
 	gb->enable_cart_ram = 0;
 	gb->cart_mode_select = 0;
 
+	/* Initialize memory map */
+	gb->memory_map[0x0] = gb->rom;
+	gb->memory_map[0x1] = gb->memory_map[0x0] + 0x1000;
+	gb->memory_map[0x2] = gb->memory_map[0x0] + 0x2000;
+	gb->memory_map[0x3] = gb->memory_map[0x0] + 0x3000;
+
+	__set_rom_bank(gb);
+	
+	gb->memory_map[0x8] = gb->vram;
+	gb->memory_map[0x9] = gb->memory_map[0x8] + 0x1000;
+	
+	__set_cram_bank(gb);
+
+	gb->memory_map[0xC] = gb->wram;
+	gb->memory_map[0xD] = gb->memory_map[0xC] + 0x1000;
+
+	gb->memory_map[0xE] = gb->memory_map[0xC];
+	gb->memory_map[0xF] = gb->memory_map[0xD];
+
 	/* Use values as though the boot ROM was already executed. */
 	if(gb->gb_bootrom_read == NULL)
 	{
 		uint8_t hdr_chk;
-		hdr_chk = gb->gb_rom_read(gb, ROM_HEADER_CHECKSUM_LOC) != 0;
+		hdr_chk = gb->rom[ROM_HEADER_CHECKSUM_LOC] != 0;
 
 		gb->cpu_reg.a = 0x01;
 		gb->cpu_reg.f_bits.z = 1;
@@ -3239,15 +3209,13 @@ void gb_reset(struct gb_s *gb)
 }
 
 enum gb_init_error_e gb_init(struct gb_s *gb,
-			     uint8_t (*gb_rom_read)(struct gb_s*, const uint_fast32_t),
-			     uint8_t (*gb_cart_ram_read)(struct gb_s*, const uint_fast32_t),
-			     void (*gb_cart_ram_write)(struct gb_s*, const uint_fast32_t, const uint8_t),
-			     void (*gb_error)(struct gb_s*, const enum gb_error_e, const uint16_t),
-			     void *priv,
-           uint8_t *wram,
-           uint8_t *vram,
-           uint8_t *oam,
-           uint8_t *hram_io)
+					 void (*gb_error)(struct gb_s*, const enum gb_error_e, const uint16_t),
+					 void *priv,
+					 uint8_t *wram,
+					 uint8_t *vram,
+					 uint8_t *oam,
+					 uint8_t *hram_io,
+					 uint8_t *rom)
 {
 	const uint16_t mbc_location = 0x0147;
 	const uint16_t bank_count_location = 0x0148;
@@ -3278,14 +3246,12 @@ enum gb_init_error_e gb_init(struct gb_s *gb,
 	};
 	const uint8_t num_ram_banks[] = { 0, 1, 1, 4, 16, 8 };
 
-  gb->wram = wram;
-  gb->vram = vram;
-  gb->oam = oam;
-  gb->hram_io = hram_io;
+	gb->wram = wram;
+	gb->vram = vram;
+	gb->oam = oam;
+	gb->hram_io = hram_io;
+	gb->rom = rom;
 
-	gb->gb_rom_read = gb_rom_read;
-	gb->gb_cart_ram_read = gb_cart_ram_read;
-	gb->gb_cart_ram_write = gb_cart_ram_write;
 	gb->gb_error = gb_error;
 	gb->direct.priv = priv;
 
@@ -3303,24 +3269,24 @@ enum gb_init_error_e gb_init(struct gb_s *gb,
 		uint16_t i;
 
 		for(i = 0x0134; i <= 0x014C; i++)
-			x = x - gb->gb_rom_read(gb, i) - 1;
+			x = x - gb->rom[i] - 1;
 
-		if(x != gb->gb_rom_read(gb, ROM_HEADER_CHECKSUM_LOC))
+		if(x != gb->rom[ROM_HEADER_CHECKSUM_LOC])
 			return GB_INIT_INVALID_CHECKSUM;
 	}
 
 	/* Check if cartridge type is supported, and set MBC type. */
 	{
-		const uint8_t mbc_value = gb->gb_rom_read(gb, mbc_location);
+		const uint8_t mbc_value = gb->rom[mbc_location];
 
 		if(mbc_value > sizeof(cart_mbc) - 1 ||
 				(gb->mbc = cart_mbc[mbc_value]) == -1)
 			return GB_INIT_CARTRIDGE_UNSUPPORTED;
 	}
 
-	gb->cart_ram = cart_ram[gb->gb_rom_read(gb, mbc_location)];
-	gb->num_rom_banks_mask = num_rom_banks_mask[gb->gb_rom_read(gb, bank_count_location)] - 1;
-	gb->num_ram_banks = num_ram_banks[gb->gb_rom_read(gb, ram_size_location)];
+	gb->cart_ram = cart_ram[gb->rom[mbc_location]];
+	gb->num_rom_banks_mask = num_rom_banks_mask[gb->rom[bank_count_location]] - 1;
+	gb->num_ram_banks = num_ram_banks[gb->rom[ram_size_location]];
 
 	/* Note that MBC2 will appear to have no RAM banks, but it actually
 	 * always has 512 half-bytes of RAM. Hence, gb->num_ram_banks must be
@@ -3343,7 +3309,7 @@ const char* gb_get_rom_name(struct gb_s* gb, char *title_str)
 
 	for(; title_loc <= title_end; title_loc++)
 	{
-		const char title_char = gb->gb_rom_read(gb, title_loc);
+		const char title_char = gb->rom[title_loc];
 
 		if(title_char >= ' ' && title_char <= '_')
 		{
@@ -3377,6 +3343,11 @@ void gb_init_lcd(struct gb_s *gb,
 	return;
 }
 #endif
+
+void gb_set_cram(struct gb_s *gb, uint8_t *cram)
+{
+  gb->cram = cram;
+}
 
 void gb_set_bootrom(struct gb_s *gb,
 		 uint8_t (*gb_bootrom_read)(struct gb_s*, const uint_fast16_t))
