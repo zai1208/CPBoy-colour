@@ -35,7 +35,6 @@ uint8_t setup_cas()
   DMAC_DMAOR->raw = 0;
   DMAC_DMAOR->DME = 1;
 
-
   // Create main folder for mcs vars
   MCS_CreateFolder("CPBoy", nullptr); 
 

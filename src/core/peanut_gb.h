@@ -38,6 +38,10 @@
 #include "../helpers/macros.h"
 #include "../cas/cpu/oc_mem.h"
 #include "../cas/cpu/dmac.h"
+#include "../cas/cpu/mmu.h"
+
+#include <sdk/os/debug.hpp>
+#include <sdk/os/lcd.hpp>
 
 #define PEANUT_GB_IS_LITTLE_ENDIAN 0
 
@@ -441,6 +445,32 @@ void __attribute__((section(".oc_mem.il.text"))) __set_cram_bank(struct gb_s *gb
 	gb->memory_map[0xB] = gb->memory_map[0xA] + 0x1000;
 }
 
+void __attribute__((section(".oc_mem.il.text"))) __gb_dma(struct gb_s *gb, uint16_t addr)
+{
+  dma_wait(DMAC_CHCR_1);
+
+  /* Start DMA operation on Channel 1 */
+  dmac_chcr tmp_chcr = { .raw = 0 };
+  tmp_chcr.TS_0 = SIZE_16x2_0;
+  tmp_chcr.TS_1 = SIZE_16x2_1;
+  tmp_chcr.DM   = DAR_INCREMENT;
+  tmp_chcr.SM   = SAR_INCREMENT;
+  tmp_chcr.RS   = AUTO;
+  tmp_chcr.TB   = CYCLE_STEAL;
+  tmp_chcr.RPT  = REPEAT_NORMAL;
+  tmp_chcr.DE   = 1;
+
+  DMAC_CHCR_1->raw = 0;
+
+  void *src_addr = gb->memory_map[PEANUT_GB_GET_MSN16(addr)] + (addr & 0xF00);
+  
+  *DMAC_SAR_1 = (uint32_t)virt_to_phys_addr(src_addr);
+  *DMAC_DAR_1 = (uint32_t)gb->oam; // Will be in P4 Area => Physical address is same as virtual
+  *DMAC_TCR_1 = OAM_SIZE / 32;      
+
+  DMAC_CHCR_1->raw = tmp_chcr.raw;
+}
+
 /**
  * Internal function used to read bytes.
  * addr is host platform endian.
@@ -726,17 +756,8 @@ void __attribute__((section(".oc_mem.il.text"))) __gb_write(struct gb_s *gb, uin
 		/* DMA Register */
 		case 0x46:
 		{
-			uint16_t dma_addr;
-			uint16_t i;
-
-			dma_addr = (uint_fast16_t)val << 8;
 			gb->hram_io[IO_DMA] = val;
-
-			for(i = 0; i < OAM_SIZE; i++)
-			{
-				gb->oam[i] = __gb_read(gb, dma_addr + i);
-			}
-
+      __gb_dma(gb, val << 8);
 			return;
 		}
 

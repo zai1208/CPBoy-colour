@@ -165,12 +165,12 @@ union dmac_dmaor
 // Common
 #define DMAC_DMAOR  ((volatile dmac_dmaor *)0xFE008060)
 
-// Channel 0 B
+// Channel 0 B-Registers
 #define DMAC_SARB_0 ((volatile uint32_t *)0xFE008120)
 #define DMAC_DARB_0 ((volatile uint32_t *)0xFE008124)
 #define DMAC_TCRB_0 ((volatile uint32_t *)0xFE008128)
 
-// Channel 1 B
+// Channel 1 B-Registers
 #define DMAC_SARB_1 ((volatile uint32_t *)0xFE008130)
 #define DMAC_DARB_1 ((volatile uint32_t *)0xFE008134)
 #define DMAC_TCRB_1 ((volatile uint32_t *)0xFE008138)
