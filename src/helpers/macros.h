@@ -5,7 +5,7 @@
 #define XSTR(x)           STR(x)
 #define STR(x)            #x
 
-#define CPBOY_VERSION     "v0.2.0"
+#define CPBOY_VERSION     "v0.2.5"
 
 #define CAS_LCD_WIDTH     320 
 #define CAS_LCD_HEIGHT    528 
