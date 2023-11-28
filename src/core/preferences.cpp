@@ -17,6 +17,7 @@
 #define CONFIG_INI_INTERLACE_ENABLE_KEY "interl_en"
 #define CONFIG_INI_FRAMESKIP_ENABLE_KEY "fs_en"
 #define CONFIG_INI_FRAMESKIP_AMOUNT_KEY "fs_am"
+#define CONFIG_INI_EMU_SPEED_KEY        "emu_spd"
 #define CONFIG_INI_SELECTED_PALETTE_KEY "sel_pal"
 
 char *get_rom_config_var_name(emu_preferences *preferences, char *name_buffer)
@@ -70,9 +71,10 @@ uint8_t process_config_ini(char *ini_string, uint32_t len, struct gb_s *gb)
   ini_key *interl_en = find_key(section, CONFIG_INI_INTERLACE_ENABLE_KEY);
   ini_key *fs_en = find_key(section, CONFIG_INI_FRAMESKIP_ENABLE_KEY);
   ini_key *fs_amount = find_key(section, CONFIG_INI_FRAMESKIP_AMOUNT_KEY);
+  ini_key *emu_speed = find_key(section, CONFIG_INI_EMU_SPEED_KEY);
   ini_key *sel_pal = find_key(section, CONFIG_INI_SELECTED_PALETTE_KEY);
 
-  if (!interl_en || !fs_en || !fs_amount || !sel_pal)
+  if (!interl_en || !fs_en || !fs_amount || !sel_pal || !emu_speed)
   {
     free_ini_file(&file);
     return 1;
@@ -81,6 +83,7 @@ uint8_t process_config_ini(char *ini_string, uint32_t len, struct gb_s *gb)
   // set_interlacing(gb, interl_en->value_int);
   set_interlacing(gb, false); // Interlacing is currently not working and therefore defaults to disabled
   set_frameskip(gb, fs_en->value_int, fs_amount->value_int);
+  set_emu_speed(gb, emu_speed->value_int);
 
   prefs->config.selected_palette = sel_pal->value_int;
 
@@ -131,6 +134,17 @@ char *create_config_ini(rom_config *config, char *ini_string, uint32_t len)
     CONFIG_INI_FRAMESKIP_AMOUNT_KEY,
     INI_TYPE_INT,
     config->frameskip_amount
+  )) 
+  {
+    free_ini_file(&file);
+    return nullptr;
+  }
+
+  if (!add_key(
+    config_section, 
+    CONFIG_INI_EMU_SPEED_KEY,
+    INI_TYPE_INT,
+    config->emulation_speed
   )) 
   {
     free_ini_file(&file);

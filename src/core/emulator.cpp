@@ -111,6 +111,13 @@ void set_interlacing(struct gb_s *gb, bool enabled)
   preferences->file_states.rom_config_changed = true;
 }
 
+void set_emu_speed(struct gb_s *gb, uint8_t multiplier){
+  emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
+  
+  preferences->config.emulation_speed = multiplier;
+  preferences->file_states.rom_config_changed = true;  
+}
+
 // Draws scanline into framebuffer.
 void lcd_draw_line(struct gb_s *gb, const uint32_t pixels[160],
   const uint_fast8_t line)
