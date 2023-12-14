@@ -1040,7 +1040,9 @@ void __attribute__((section(".oc_mem.il.text"))) __gb_draw_line(struct gb_s *gb)
 	if(gb->display.lcd_draw_line == NULL)
 		return;
 
-	if(gb->direct.frame_skip && (gb->display.frame_count % gb->direct.frame_skip_amount) != 0)
+  gb->direct.frame_drawn = !(gb->direct.frame_skip && (gb->display.frame_count % gb->direct.frame_skip_amount) != 0);
+
+	if(!gb->direct.frame_drawn)
 		return;
 
 	/* If interlaced mode is activated, check if we need to draw the current
@@ -3356,6 +3358,7 @@ void gb_init_lcd(struct gb_s *gb,
 	gb->direct.interlace = 0;
 	gb->display.interlace_count = 0;
 	gb->direct.frame_skip = 0;
+	gb->direct.frame_drawn = 0;
 	gb->display.frame_count = 0;
 
 	gb->display.window_clear = 0;

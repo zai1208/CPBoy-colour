@@ -56,7 +56,7 @@ union cmt_cmcsr
     cmt_cmcsr_cmm CMM   : 1; // Compare Match Mode
     uint16_t CMTOUT_IE  : 1;
     uint16_t _reserved1 : 1;
-    uint16_t CMR        : 2; // Compare Match Request
+    cmt_cmcsr_cmr CMR   : 2; // Compare Match Request
     uint16_t _reserved2 : 1;
     cmt_cmcsr_cks CKS   : 3; // Clock Select
   };
@@ -68,3 +68,29 @@ union cmt_cmcsr
 #define CMT_CMCSR ((volatile cmt_cmcsr *)0xA44A0060)
 #define CMT_CMCNT ((volatile uint32_t *) 0xA44A0064)
 #define CMT_CMCOR ((volatile uint32_t *) 0xA44A0068)
+
+inline void cmt_set(uint32_t constant, cmt_cmcsr_cmm cmm, cmt_cmcsr_cmr cmr)
+{
+  CMT_CMSTR->STR5 = 0;
+  *CMT_CMCOR = constant;
+  *CMT_CMCNT = 0;
+
+  cmt_cmcsr temp_cmcsr = { .raw = 0 };
+  temp_cmcsr.CMS = SIZE_32_BIT;
+  temp_cmcsr.CMM = cmm;
+  temp_cmcsr.CMR = cmr;
+  temp_cmcsr.CKS = CLOCK_RCLK_DIV_8;
+
+  CMT_CMCSR->raw = temp_cmcsr.raw;
+}
+
+inline void cmt_start()
+{
+  CMT_CMCSR->CMF = 0;
+  CMT_CMSTR->STR5 = 1;
+}
+
+inline void cmt_wait()
+{
+  while (!CMT_CMCSR->CMF) { }
+}

@@ -8,13 +8,15 @@
 #include <sdk/os/input.hpp>
 #include <sdk/os/debug.hpp>
 #include "controls.h"
-#include "error.h"
-#include "peanut_gb.h"
 #include "cart_ram.h"
+#include "error.h"
+#include "frametimes.h"
+#include "peanut_gb.h"
 #include "../cas/display.h"
 #include "../cas/cpu/dmac.h"
 #include "../cas/cpu/oc_mem.h"
 #include "../cas/cpu/stack.h"
+#include "../cas/cpu/cmt.h"
 #include "../emu_ui/menu/menu.h"
 #include "../helpers/macros.h"
 #include "../helpers/functions.h"
@@ -24,8 +26,6 @@
 #define INPUT_OPEN_MENU 1
 
 #define STACK_PTR_ADDR  (void *)((uint32_t)Y_MEMORY_1 + (0x1000 - 4))
-
-bool refreshed_lcd;
 
 /* Global arrays in OC-Memory */
 uint8_t gb_wram[WRAM_SIZE];
@@ -90,6 +90,8 @@ void set_frameskip(struct gb_s *gb, bool enabled, uint8_t amount)
   preferences->config.frameskip_amount = new_amount;    
 
   preferences->file_states.rom_config_changed = true;
+
+  frametime_counter_set(gb);
 }
 
 void set_interlacing(struct gb_s *gb, bool enabled)
@@ -129,7 +131,6 @@ void lcd_draw_line(struct gb_s *gb, const uint32_t pixels[160],
 
   if (unlikely(line == 0))
   {
-    refreshed_lcd = true;
     prepare_gb_lcd();
   }
 
@@ -299,16 +300,17 @@ uint8_t close_rom(struct gb_s *gb)
 uint8_t execute_rom(struct gb_s *gb) 
 {
   emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
+  frametime_counter_set(gb);
 
   for (;;)
   {
+    frametime_counter_start();
+
     // Handle rtc
     if (unlikely(gb->display.frame_count % 24 == 0))
     {
       gb_tick_rtc(gb);
     }
-
-    refreshed_lcd = false;
 
     void *tmp_stack_ptr_bak = get_stack_ptr(); 
     set_stack_ptr(STACK_PTR_ADDR);
@@ -318,8 +320,17 @@ uint8_t execute_rom(struct gb_s *gb)
 
     set_stack_ptr(tmp_stack_ptr_bak);
 
+    frametime_counter_wait(gb);
+
+    // Handle input
+    if (unlikely(execution_handle_input(gb) == INPUT_OPEN_MENU))
+    {
+      // Do not actually open the menu, but render another frame for gb preview first
+      preferences->emulator_paused = true;
+    }
+
     // Check if pause menu should be displayed
-    if (unlikely(preferences->emulator_paused && refreshed_lcd))
+    if (unlikely(preferences->emulator_paused && gb->direct.frame_drawn))
     {
       uint8_t menu_code = emulation_menu(gb, false);
 
@@ -331,13 +342,6 @@ uint8_t execute_rom(struct gb_s *gb)
       preferences->emulator_paused = false;
 
       LCD_Refresh();
-    }
-
-    // Handle input
-    if (unlikely(execution_handle_input(gb) == INPUT_OPEN_MENU))
-    {
-      // Do not actually open the menu, but render another frame for gb preview first
-      preferences->emulator_paused = true;
     }
   }
 }
