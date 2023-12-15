@@ -19,22 +19,29 @@ namespace hhk
 
 #define TAB_CURRENT_TITLE         "Current"
 
-#define TAB_CUR_ITEM_COUNT              3
+#define TAB_CUR_ITEM_COUNT              4
 #define TAB_CUR_ITEM_FRAMESKIP_INDEX    0
 #define TAB_CUR_ITEM_FRAMESKIP_TITLE    "Frameskipping"
 #define TAB_CUR_ITEM_FRAMESKIP_SUBTITLE "Skips rendering and LCD-Refresh"
 #define TAB_CUR_ITEM_INTERL_INDEX       0
 #define TAB_CUR_ITEM_INTERL_TITLE       "Interlacing"
-#define TAB_CUR_ITEM_PALETTE_INDEX      1
+#define TAB_CUR_ITEM_SPEED_INDEX        1
+#define TAB_CUR_ITEM_SPEED_TITLE        "Emulation Speed"
+#define TAB_CUR_ITEM_SPEED_SUBTITLE     "Set the emulation speed target"
+#define TAB_CUR_ITEM_PALETTE_INDEX      2
 #define TAB_CUR_ITEM_PALETTE_TITLE      "Color Palette"
 #define TAB_CUR_ITEM_PALETTE_SUBTITLE   "Select a palette for this ROM"
-#define TAB_CUR_ITEM_QUIT_INDEX         2
+#define TAB_CUR_ITEM_QUIT_INDEX         3
 #define TAB_CUR_ITEM_QUIT_TITLE         "Quit CPBoy"
 
 #define DIALOG_FRAMESKIP_ITEM_COUNT   3
 #define DIALOG_FRAMESKIP_WIDTH        200
 #define DIALOG_FRAMESKIP_HEIGHT       DEBUG_LINE_HEIGHT * DIALOG_FRAMESKIP_ITEM_COUNT + ALERT_CONTENT_OFFSET_Y + (4 * STD_CONTENT_OFFSET)
+
 #define DIALOG_PALETTE_WIDTH          200
+
+#define DIALOG_SPEED_ITEM_COUNT       2
+#define DIALOG_SPEED_WIDTH            200
 
 void draw_frameskip_alert(emu_preferences *preferences, uint8_t selected_item)
 {
@@ -114,6 +121,84 @@ void draw_frameskip_alert(emu_preferences *preferences, uint8_t selected_item)
   );
 }
 
+void draw_speed_alert(emu_preferences *preferences, uint8_t selected_item)
+{
+  uint16_t dialog_height = ALERT_CONTENT_OFFSET_Y + (2 * DEBUG_LINE_HEIGHT) + (3 * STD_CONTENT_OFFSET);
+
+  uint32_t position = draw_alert_box(
+    TAB_CUR_ITEM_SPEED_TITLE,
+    TAB_CUR_ITEM_SPEED_SUBTITLE,
+    DIALOG_SPEED_WIDTH,
+    dialog_height,
+    COLOR_MENU_BG, 
+    COLOR_PRIMARY
+  );
+
+  char tmp[9];
+
+  if (preferences->config.emulation_speed == EMU_SPEED_MAX + EMU_SPEED_STEP)
+  {
+    strlcpy(tmp, "Unlocked", sizeof(tmp));
+  }
+  else
+  {
+    itoa(preferences->config.emulation_speed, tmp, 10);
+    strlcat(tmp, "%", sizeof(tmp));
+  }
+
+  const uint16_t dialog_x = ALERT_GET_X(position);
+  const uint16_t dialog_y = ALERT_GET_Y(position);
+
+  const uint16_t slider_offset = ALERT_CONTENT_OFFSET_X + (6 * DEBUG_CHAR_WIDTH);
+  const uint16_t slider_width = DIALOG_FRAMESKIP_WIDTH - slider_offset - 
+    (9 * DEBUG_CHAR_WIDTH) - STD_CONTENT_OFFSET;
+  
+  // Draw amount slider
+  print_string(
+    "Speed", 
+    dialog_x + ALERT_CONTENT_OFFSET_X, 
+    dialog_y + ALERT_CONTENT_OFFSET_Y, 
+    0, 
+    COLOR_WHITE, 
+    COLOR_BLACK,
+    true 
+  );
+  
+  draw_slider(
+    dialog_x + slider_offset, 
+    dialog_y + ALERT_CONTENT_OFFSET_Y, 
+    slider_width, 
+    SLIDER_STD_TRACK_COLOR, 
+    (selected_item == 0) ? COLOR_PRIMARY : COLOR_WHITE, 
+    EMU_SPEED_MIN, 
+    EMU_SPEED_MAX + EMU_SPEED_STEP, 
+    preferences->config.emulation_speed
+  );
+
+  print_string_centered(
+    tmp,
+    dialog_x + slider_offset + slider_width + STD_CONTENT_OFFSET + STD_CONTENT_OFFSET,
+    dialog_y + ALERT_CONTENT_OFFSET_Y,
+    (DEBUG_CHAR_WIDTH - 2) * 8,
+    0,
+    COLOR_WHITE,
+    COLOR_BLACK,
+    true
+  );
+
+  // Print ok button  
+  print_string_centered(
+    "OK",
+    dialog_x + ALERT_CONTENT_OFFSET_X,
+    dialog_y + ALERT_CONTENT_OFFSET_Y + DEBUG_LINE_HEIGHT + (2 * STD_CONTENT_OFFSET),
+    DIALOG_FRAMESKIP_WIDTH - (2 * ALERT_CONTENT_OFFSET_X),
+    0,
+    COLOR_WHITE,
+    (selected_item == 1)? COLOR_SELECTED : COLOR_BLACK,
+    true
+  );
+}
+
 void draw_palette_selection_alert(emu_preferences *preferences, uint8_t selected_item)
 {
   uint16_t dialog_height = ALERT_CONTENT_OFFSET_Y + (preferences->palette_count * DEBUG_LINE_HEIGHT) + STD_CONTENT_OFFSET;
@@ -160,7 +245,7 @@ int32_t frameskip_alert(struct gb_s *gb)
   }
 
   bool frameskip_enabled = preferences->config.frameskip_enabled;
-  uint8_t frameskip_amount = preferences->config.frameskip_amount;
+  uint8_t frameskip_amount;
 
   uint8_t selected_item = 0;
 
@@ -172,7 +257,9 @@ int32_t frameskip_alert(struct gb_s *gb)
 
   // Rendering and input handling
   for (;;) 
-  {
+  {  
+    frameskip_amount = preferences->config.frameskip_amount - FRAMESKIP_MIN;
+
     draw_frameskip_alert(preferences, selected_item);
 
     // Check if OK button or toggle was pressed
@@ -198,7 +285,70 @@ int32_t frameskip_alert(struct gb_s *gb)
     }
 
     // Apply frameskip to emulator    
-    set_frameskip(gb, frameskip_enabled, frameskip_amount);
+    set_frameskip(gb, frameskip_enabled, frameskip_amount + FRAMESKIP_MIN);
+
+    LCD_Refresh();
+  }
+  
+  // Close alert
+  if (lcd_backup)
+  {
+    memcpy(vram, lcd_backup, CAS_LCD_HEIGHT * CAS_LCD_WIDTH * sizeof(uint16_t));
+    hhk::free(lcd_backup);
+  }
+
+  return 0;
+}
+
+int32_t emu_speed_alert(struct gb_s *gb)
+{
+  emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
+  
+  // Backup LCD and darken background
+  uint16_t *lcd_backup = (uint16_t *)hhk::malloc(CAS_LCD_HEIGHT * CAS_LCD_WIDTH * sizeof(uint16_t));
+
+  if (lcd_backup)
+  {
+    memcpy(lcd_backup, vram, CAS_LCD_HEIGHT * CAS_LCD_WIDTH * sizeof(uint16_t));
+    darken_screen_area(0, 0, CAS_LCD_WIDTH, CAS_LCD_HEIGHT);
+  }
+
+  uint8_t emu_speed;
+  uint8_t selected_item = 0;
+
+  // Create horizontal items count
+  static const uint8_t h_items_count[DIALOG_SPEED_ITEM_COUNT] = { (EMU_SPEED_MAX + EMU_SPEED_STEP) / EMU_SPEED_STEP, 1 };
+
+  // Create horizontal items pointer
+  uint8_t *selected_h_items[DIALOG_SPEED_ITEM_COUNT] = { &emu_speed, nullptr };
+
+  // Rendering and input handling
+  for (;;) 
+  {
+    emu_speed = (preferences->config.emulation_speed - EMU_SPEED_MIN) / EMU_SPEED_STEP;
+
+    draw_speed_alert(preferences, selected_item);
+
+    // Check if OK button or toggle was pressed
+    if (
+      process_input(
+        selected_h_items, 
+        &selected_item, 
+        h_items_count, 
+        DIALOG_SPEED_ITEM_COUNT, 
+        nullptr,
+        false
+      ) == INPUT_PROC_EXECUTE
+    )
+    {
+      if (selected_item == 1)
+      {
+        break;
+      }
+    }
+
+    // Apply speed to emulator    
+    set_emu_speed(gb, (emu_speed * EMU_SPEED_STEP) + EMU_SPEED_MIN);
 
     LCD_Refresh();
   }
@@ -306,6 +456,27 @@ int32_t action_frameskip_selection(menu_item *item, gb_s *gb)
   return return_code; 
 }
 
+int32_t action_speed_selection(menu_item *item, gb_s *gb)
+{
+  emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
+  int32_t return_code = emu_speed_alert(gb);
+
+  // Update item value text and color
+  item->value_color = COLOR_SUCCESS;
+
+  if (preferences->config.emulation_speed == EMU_SPEED_MAX + EMU_SPEED_STEP)
+  {
+    strlcpy(item->value, "Unlocked", sizeof(item->value));
+  }
+  else
+  {
+    itoa(preferences->config.emulation_speed, item->value, 10);
+    strlcat(item->value, "%", sizeof(item->value));
+  }
+
+  return return_code; 
+}
+
 int32_t action_interlacing_selection(menu_item *item, gb_s *gb)
 {
   emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
@@ -371,12 +542,14 @@ menu_tab *prepare_tab_current(menu_tab *tab, emu_preferences *preferences)
 
   // Disabled state for each item
   tab->items[TAB_CUR_ITEM_FRAMESKIP_INDEX].disabled = false;
+  tab->items[TAB_CUR_ITEM_SPEED_INDEX].disabled = false;
   // tab->items[TAB_CUR_ITEM_INTERL_INDEX].disabled = false;
   tab->items[TAB_CUR_ITEM_PALETTE_INDEX].disabled = false;
   tab->items[TAB_CUR_ITEM_QUIT_INDEX].disabled = false;
 
   // Title for each item
   strlcpy(tab->items[TAB_CUR_ITEM_FRAMESKIP_INDEX].title, TAB_CUR_ITEM_FRAMESKIP_TITLE, sizeof(tab->items[TAB_CUR_ITEM_FRAMESKIP_INDEX].title));
+  strlcpy(tab->items[TAB_CUR_ITEM_SPEED_INDEX].title, TAB_CUR_ITEM_SPEED_TITLE, sizeof(tab->items[TAB_CUR_ITEM_SPEED_INDEX].title));
   // strlcpy(tab->items[TAB_CUR_ITEM_INTERL_INDEX].title, TAB_CUR_ITEM_INTERL_TITLE, sizeof(tab->items[TAB_CUR_ITEM_INTERL_INDEX].title));
   strlcpy(tab->items[TAB_CUR_ITEM_PALETTE_INDEX].title, TAB_CUR_ITEM_PALETTE_TITLE, sizeof(tab->items[TAB_CUR_ITEM_PALETTE_INDEX].title));
   strlcpy(tab->items[TAB_CUR_ITEM_QUIT_INDEX].title, TAB_CUR_ITEM_QUIT_TITLE, sizeof(tab->items[TAB_CUR_ITEM_QUIT_INDEX].title));
@@ -395,6 +568,16 @@ menu_tab *prepare_tab_current(menu_tab *tab, emu_preferences *preferences)
     strlcat(tab->items[TAB_CUR_ITEM_FRAMESKIP_INDEX].value, ")", sizeof(tab->items[TAB_CUR_ITEM_FRAMESKIP_INDEX].value));
   }
 
+  if (preferences->config.emulation_speed == EMU_SPEED_MAX + EMU_SPEED_STEP)
+  {
+    strlcpy(tab->items[TAB_CUR_ITEM_SPEED_INDEX].value, "Unlocked", sizeof(tab->items[TAB_CUR_ITEM_SPEED_INDEX].value));
+  }
+  else
+  {
+    itoa(preferences->config.emulation_speed, tab->items[TAB_CUR_ITEM_SPEED_INDEX].value, 10);
+    strlcat(tab->items[TAB_CUR_ITEM_SPEED_INDEX].value, "%", sizeof(tab->items[TAB_CUR_ITEM_SPEED_INDEX].value));
+  }
+
   // strlcpy(tab->items[TAB_CUR_ITEM_INTERL_INDEX].value, 
   //   (preferences->config.interlacing_enabled)? "Enabled" : "Disabled",
   //   sizeof(tab->items[TAB_CUR_ITEM_INTERL_INDEX].value));
@@ -408,10 +591,12 @@ menu_tab *prepare_tab_current(menu_tab *tab, emu_preferences *preferences)
     (preferences->config.frameskip_enabled)? COLOR_SUCCESS : COLOR_DANGER;
   // tab->items[TAB_CUR_ITEM_INTERL_INDEX].value_color = 
   //   (preferences->config.interlacing_enabled)? COLOR_SUCCESS : COLOR_DANGER;
+  tab->items[TAB_CUR_ITEM_SPEED_INDEX].value_color = COLOR_SUCCESS;
   tab->items[TAB_CUR_ITEM_PALETTE_INDEX].value_color = COLOR_SUCCESS;
 
   // Action for each item
   tab->items[TAB_CUR_ITEM_FRAMESKIP_INDEX].action = action_frameskip_selection;
+  tab->items[TAB_CUR_ITEM_SPEED_INDEX].action = action_speed_selection;
   // tab->items[TAB_CUR_ITEM_INTERL_INDEX].action = action_interlacing_selection;
   tab->items[TAB_CUR_ITEM_PALETTE_INDEX].action = action_palette_selection;
   tab->items[TAB_CUR_ITEM_QUIT_INDEX].action = action_quit_emulator;

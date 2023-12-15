@@ -113,11 +113,15 @@ void set_interlacing(struct gb_s *gb, bool enabled)
   preferences->file_states.rom_config_changed = true;
 }
 
-void set_emu_speed(struct gb_s *gb, uint8_t multiplier){
+void set_emu_speed(struct gb_s *gb, uint16_t percentage){
   emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
   
-  preferences->config.emulation_speed = multiplier;
-  preferences->file_states.rom_config_changed = true;  
+  uint16_t new_percentage = clamp(percentage, (uint16_t)EMU_SPEED_MIN, (uint16_t)(EMU_SPEED_MAX + EMU_SPEED_STEP));
+  
+  preferences->config.emulation_speed = new_percentage;
+  preferences->file_states.rom_config_changed = true;
+
+  frametime_counter_set(gb);  
 }
 
 // Draws scanline into framebuffer.
@@ -322,13 +326,6 @@ uint8_t execute_rom(struct gb_s *gb)
 
     frametime_counter_wait(gb);
 
-    // Handle input
-    if (unlikely(execution_handle_input(gb) == INPUT_OPEN_MENU))
-    {
-      // Do not actually open the menu, but render another frame for gb preview first
-      preferences->emulator_paused = true;
-    }
-
     // Check if pause menu should be displayed
     if (unlikely(preferences->emulator_paused && gb->direct.frame_drawn))
     {
@@ -342,6 +339,13 @@ uint8_t execute_rom(struct gb_s *gb)
       preferences->emulator_paused = false;
 
       LCD_Refresh();
+    }
+
+    // Handle input
+    if (unlikely(execution_handle_input(gb) == INPUT_OPEN_MENU))
+    {
+      // Do not actually open the menu, but render another frame for gb preview first
+      preferences->emulator_paused = true;
     }
   }
 }

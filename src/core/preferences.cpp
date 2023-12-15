@@ -81,9 +81,9 @@ uint8_t process_config_ini(char *ini_string, uint32_t len, struct gb_s *gb)
   }
   
   // set_interlacing(gb, interl_en->value_int);
+  set_emu_speed(gb, emu_speed->value_int);
   set_interlacing(gb, false); // Interlacing is currently not working and therefore defaults to disabled
   set_frameskip(gb, fs_en->value_int, fs_amount->value_int);
-  set_emu_speed(gb, emu_speed->value_int);
 
   prefs->config.selected_palette = sel_pal->value_int;
 
