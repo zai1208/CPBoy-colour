@@ -90,6 +90,13 @@ inline void cmt_start()
   CMT_CMSTR->STR5 = 1;
 }
 
+inline void cmt_stop()
+{
+  CMT_CMSTR->STR5 = 0;
+  *CMT_CMCNT = 0;
+  CMT_CMCSR->raw = 0;
+}
+
 inline void cmt_wait()
 {
   while (!CMT_CMCSR->CMF) { }

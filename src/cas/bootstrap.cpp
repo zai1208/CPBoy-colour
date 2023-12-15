@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <sdk/os/mcs.hpp>
+#include "cpu/cmt.h"
 #include "cpu/dmac.h"
 #include "cpu/oc_mem.h"
 #include "cpu/power.h"
@@ -52,6 +53,8 @@ void restore_cas()
   POWER_MSTPCR0->DMAC = 1;
 
   // Disable Timers
+  cmt_stop();
+
   POWER_MSTPCR0->CMT = 1;
   POWER_MSTPCR0->TMU = 1;
 }
