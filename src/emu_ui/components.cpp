@@ -16,17 +16,18 @@ namespace hhk
   #include <sdk/os/mem.hpp>
 }
 
-#define CAS_LCD_WIDTH        320 
-#define CAS_LCD_HEIGHT       528 
+#define CAS_LCD_WIDTH         320 
+#define CAS_LCD_HEIGHT        528 
 
-#define SLIDER_HANDLE_WIDTH  4
-#define SLIDER_TRACK_HEIGHT  2
+#define SLIDER_HANDLE_WIDTH   4
+#define SLIDER_TRACK_HEIGHT   2
+#define SLIDER_Y_OFFSET       1
 
-#define TEXT_ALERT_MIN_WIDTH   100
-#define TEXT_ALERT_MAX_CHAR    40
-#define TEXT_ALERT_MAX_WIDTH   ((2 * ALERT_CONTENT_OFFSET_X) + ((DEBUG_CHAR_WIDTH - 2) * TEXT_ALERT_MAX_CHAR))
-#define TEXT_ALERT_MIN_HEIGTH  (STD_CONTENT_OFFSET * 4) + (DEBUG_LINE_HEIGHT * 2)
-#define TEXT_ALERT_MAX_HEIGHT  (CAS_LCD_HEIGHT - 60)
+#define TEXT_ALERT_MIN_WIDTH  100
+#define TEXT_ALERT_MAX_CHAR   40
+#define TEXT_ALERT_MAX_WIDTH  ((2 * ALERT_CONTENT_OFFSET_X) + ((DEBUG_CHAR_WIDTH - 2) * TEXT_ALERT_MAX_CHAR))
+#define TEXT_ALERT_MIN_HEIGTH (STD_CONTENT_OFFSET * 4) + (DEBUG_LINE_HEIGHT * 2)
+#define TEXT_ALERT_MAX_HEIGHT (CAS_LCD_HEIGHT - 60)
 
 #define MAX_ALERT_MESSAGE_LEN 300
 
@@ -132,12 +133,12 @@ void draw_slider(uint16_t x, uint16_t y, uint16_t width, uint16_t track_color,
 	const uint16_t track_width = width - SLIDER_HANDLE_WIDTH;
 
 	// Calculate handle position (Fixed point arithmetic) 
-	const uint16_t handle_offset = ((((value - min_value) * 0x10000) / max_value) * track_width) / 0x10000;
+	const uint16_t handle_offset = ((((value - min_value) * 0x10000) / (max_value - min_value)) * track_width) / 0x10000;
 
 	// Draw track
 	draw_rectangle(
     x + (SLIDER_HANDLE_WIDTH / 2), 
-    y + (SLIDER_HANDLE_HEIGHT / 2) - (SLIDER_TRACK_HEIGHT / 2), 
+    y + (SLIDER_HANDLE_HEIGHT / 2) - (SLIDER_TRACK_HEIGHT / 2) + SLIDER_Y_OFFSET, 
     track_width, 
 		SLIDER_TRACK_HEIGHT, 
     track_color, 
@@ -148,7 +149,7 @@ void draw_slider(uint16_t x, uint16_t y, uint16_t width, uint16_t track_color,
 	// Draw handle
 	draw_rectangle(
     x + handle_offset, 
-    y, 
+    y + SLIDER_Y_OFFSET, 
     SLIDER_HANDLE_WIDTH, 
     SLIDER_HANDLE_HEIGHT, 
     handle_color, 

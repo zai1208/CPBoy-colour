@@ -617,6 +617,8 @@ struct gb_s
     uint8_t interlace : 1;
     uint8_t frame_skip : 1;
 
+    uint8_t frame_drawn : 1;
+
     union
     {
       struct

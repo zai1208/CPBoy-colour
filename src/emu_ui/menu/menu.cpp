@@ -477,7 +477,8 @@ uint8_t emulation_menu(struct gb_s *gb, bool preview_only)
         .items[emulation_menu.selected_item].action(
           &(emulation_menu.tabs[emulation_menu.selected_tab]
           .items[emulation_menu.selected_item]), 
-          gb);
+          gb
+        );
       
       // Close the menu if something went wrong in the action
       if (return_code != 0)

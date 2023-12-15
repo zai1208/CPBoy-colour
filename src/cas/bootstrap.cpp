@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <sdk/os/mcs.hpp>
+#include "cpu/cmt.h"
 #include "cpu/dmac.h"
 #include "cpu/oc_mem.h"
 #include "cpu/power.h"
@@ -31,9 +32,13 @@ uint8_t setup_cas()
   } 
 
   // Enable DMA Controller
-  POWER_MSTPCR0->raw &= ~(1 << 21);
+  POWER_MSTPCR0->DMAC = 0;
   DMAC_DMAOR->raw = 0;
   DMAC_DMAOR->DME = 1;
+
+  // Enable Timers
+  POWER_MSTPCR0->TMU = 0;
+  POWER_MSTPCR0->CMT = 0;
 
   // Create main folder for mcs vars
   MCS_CreateFolder("CPBoy", nullptr); 
@@ -45,7 +50,13 @@ void restore_cas()
 {
   // Disable DMA Controller
   DMAC_DMAOR->DME = 0;
-  POWER_MSTPCR0->raw |= (1 << 21);
+  POWER_MSTPCR0->DMAC = 1;
+
+  // Disable Timers
+  cmt_stop();
+
+  POWER_MSTPCR0->CMT = 1;
+  POWER_MSTPCR0->TMU = 1;
 }
 
 uint8_t load_bins(const char **bin_files, void **load_addresses, size_t bin_count) 
