@@ -244,8 +244,8 @@ uint8_t prepare_emulator(struct gb_s *gb, emu_preferences *preferences)
       return 1;
 
     case GB_INIT_INVALID_CHECKSUM:
-      set_error(EEMUCHECKSUM);
-      return 1;
+      // Ignore invalid checksum
+      break;
 
     default:
       set_error(EEMUGEN);
