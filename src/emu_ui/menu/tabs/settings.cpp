@@ -812,7 +812,7 @@ int32_t action_show_credits(menu_item *item, gb_s *gb)
     TAB_SETTINGS_ITEM_CREDITS_SUBTITLE,
     TAB_SETTINGS_ITEM_CREDITS_CONTENT,
     COLOR_WHITE,
-    COLOR_BLACK,
+    COLOR_MENU_BG,
     COLOR_PRIMARY
   );
 
