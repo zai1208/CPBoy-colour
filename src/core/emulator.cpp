@@ -13,10 +13,11 @@
 #include "frametimes.h"
 #include "peanut_gb.h"
 #include "../cas/display.h"
+#include "../cas/cpu/cmt.h"
+#include "../cas/cpu/cpg.h"
 #include "../cas/cpu/dmac.h"
 #include "../cas/cpu/oc_mem.h"
 #include "../cas/cpu/stack.h"
-#include "../cas/cpu/cmt.h"
 #include "../emu_ui/menu/menu.h"
 #include "../helpers/macros.h"
 #include "../helpers/functions.h"
@@ -122,6 +123,23 @@ void set_emu_speed(struct gb_s *gb, uint16_t percentage){
   preferences->file_states.rom_config_changed = true;
 
   frametime_counter_set(gb);  
+}
+
+void set_overclock(struct gb_s *gb, bool enabled)
+{
+  emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
+
+  // Check if anything should be changed
+  if (preferences->config.overclock_enabled == enabled)
+  {
+    return;
+  }
+
+  preferences->config.overclock_enabled = enabled;
+  preferences->file_states.rom_config_changed = true;
+
+  cpg_set_pll_mul((enabled)? PLL_MUL_48 : CPG_PLL_MUL_DEFAULT);
+  frametime_counter_set(gb);
 }
 
 // Draws scanline into framebuffer.

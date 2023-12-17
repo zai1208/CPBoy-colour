@@ -9,6 +9,7 @@
 #define DEFAULT_FRAMESKIP_ENABLE  false
 #define DEFAULT_FRAMESKIP_AMOUNT  1
 #define DEFAULT_EMU_SPEED         100
+#define DEFAULT_OVERCLOCK_ENABLE  false
 #define DEFAULT_SELECTED_PALETTE  0
 
 typedef struct 
@@ -19,6 +20,8 @@ typedef struct
   uint8_t frameskip_amount;
 
   uint16_t emulation_speed;
+
+  bool overclock_enabled;
   
   uint8_t selected_palette;
 } rom_config;

@@ -18,6 +18,8 @@ void set_interlacing(struct gb_s *gb, bool enabled);
 
 void set_emu_speed(struct gb_s *gb, uint16_t percentage);
 
+void set_overclock(struct gb_s *gb, bool enabled);
+
 uint8_t execute_rom(struct gb_s *gb);
 
 uint8_t prepare_emulator(struct gb_s *gb, emu_preferences *preferences);
