@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <sdk/os/mcs.hpp>
+#include "cpu/cpg.h"
 #include "cpu/cmt.h"
 #include "cpu/dmac.h"
 #include "cpu/oc_mem.h"
@@ -57,6 +58,9 @@ void restore_cas()
 
   POWER_MSTPCR0->CMT = 1;
   POWER_MSTPCR0->TMU = 1;
+  
+  // Restore clock speed
+  cpg_set_pll_mul(CPG_PLL_MUL_DEFAULT);
 }
 
 uint8_t load_bins(const char **bin_files, void **load_addresses, size_t bin_count) 
