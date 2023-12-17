@@ -19,29 +19,41 @@ namespace hhk
 
 #define TAB_CURRENT_TITLE         "Current"
 
-#define TAB_CUR_ITEM_COUNT              4
+#define TAB_CUR_ITEM_COUNT              5
+
 #define TAB_CUR_ITEM_FRAMESKIP_INDEX    0
 #define TAB_CUR_ITEM_FRAMESKIP_TITLE    "Frameskipping"
 #define TAB_CUR_ITEM_FRAMESKIP_SUBTITLE "Skips rendering and LCD-Refresh"
+
 #define TAB_CUR_ITEM_INTERL_INDEX       0
 #define TAB_CUR_ITEM_INTERL_TITLE       "Interlacing"
+
 #define TAB_CUR_ITEM_SPEED_INDEX        1
 #define TAB_CUR_ITEM_SPEED_TITLE        "Emulation Speed"
 #define TAB_CUR_ITEM_SPEED_SUBTITLE     "Set the emulation speed target"
-#define TAB_CUR_ITEM_PALETTE_INDEX      2
+
+#define TAB_CUR_ITEM_OVERCLOCK_INDEX    2
+#define TAB_CUR_ITEM_OVERCLOCK_TITLE    "Overclock"
+
+#define TAB_CUR_ITEM_PALETTE_INDEX      3
 #define TAB_CUR_ITEM_PALETTE_TITLE      "Color Palette"
 #define TAB_CUR_ITEM_PALETTE_SUBTITLE   "Select a palette for this ROM"
-#define TAB_CUR_ITEM_QUIT_INDEX         3
+
+#define TAB_CUR_ITEM_QUIT_INDEX         4
 #define TAB_CUR_ITEM_QUIT_TITLE         "Quit CPBoy"
 
-#define DIALOG_FRAMESKIP_ITEM_COUNT   3
-#define DIALOG_FRAMESKIP_WIDTH        200
-#define DIALOG_FRAMESKIP_HEIGHT       DEBUG_LINE_HEIGHT * DIALOG_FRAMESKIP_ITEM_COUNT + ALERT_CONTENT_OFFSET_Y + (4 * STD_CONTENT_OFFSET)
+#define DIALOG_FRAMESKIP_ITEM_COUNT     3
+#define DIALOG_FRAMESKIP_WIDTH          200
+#define DIALOG_FRAMESKIP_HEIGHT         DEBUG_LINE_HEIGHT * DIALOG_FRAMESKIP_ITEM_COUNT + ALERT_CONTENT_OFFSET_Y + (4 * STD_CONTENT_OFFSET)
 
-#define DIALOG_PALETTE_WIDTH          200
+#define DIALOG_PALETTE_WIDTH            200
 
-#define DIALOG_SPEED_ITEM_COUNT       2
-#define DIALOG_SPEED_WIDTH            200
+#define DIALOG_SPEED_ITEM_COUNT         2
+#define DIALOG_SPEED_WIDTH              200
+
+#define OVERLOCK_WARNING_TEXT           "The CAS will be overclocked by 50%.\n" \
+                                        "This will increase performance at the cost of decreased battery life.\n\n" \
+                                        "Use at your own risk"
 
 void draw_frameskip_alert(emu_preferences *preferences, uint8_t selected_item)
 {
@@ -491,6 +503,33 @@ int32_t action_interlacing_selection(menu_item *item, gb_s *gb)
   return 0;
 }
 
+int32_t action_overclock_selection(menu_item *item, gb_s *gb)
+{
+  emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
+
+  // Show warning when enabling overclock
+  if (!preferences->config.overclock_enabled)
+  {
+    ok_alert(
+      TAB_CUR_ITEM_OVERCLOCK_TITLE,
+      nullptr,
+      OVERLOCK_WARNING_TEXT,
+      COLOR_WHITE,
+      COLOR_MENU_BG,
+      COLOR_PRIMARY
+    );
+  }
+
+  // Toggle overclock
+  set_overclock(gb, !preferences->config.overclock_enabled);
+
+  // Update item value text and color
+  strlcpy(item->value, (preferences->config.overclock_enabled)? "Enabled" : "Disabled", sizeof(item->value));
+  item->value_color = (preferences->config.overclock_enabled)? COLOR_SUCCESS : COLOR_DANGER;
+
+  return 0;
+}
+
 int32_t action_palette_selection(menu_item *item, gb_s *gb)
 {
   emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
@@ -543,6 +582,7 @@ menu_tab *prepare_tab_current(menu_tab *tab, emu_preferences *preferences)
   // Disabled state for each item
   tab->items[TAB_CUR_ITEM_FRAMESKIP_INDEX].disabled = false;
   tab->items[TAB_CUR_ITEM_SPEED_INDEX].disabled = false;
+  tab->items[TAB_CUR_ITEM_OVERCLOCK_INDEX].disabled = false;
   // tab->items[TAB_CUR_ITEM_INTERL_INDEX].disabled = false;
   tab->items[TAB_CUR_ITEM_PALETTE_INDEX].disabled = false;
   tab->items[TAB_CUR_ITEM_QUIT_INDEX].disabled = false;
@@ -550,6 +590,7 @@ menu_tab *prepare_tab_current(menu_tab *tab, emu_preferences *preferences)
   // Title for each item
   strlcpy(tab->items[TAB_CUR_ITEM_FRAMESKIP_INDEX].title, TAB_CUR_ITEM_FRAMESKIP_TITLE, sizeof(tab->items[TAB_CUR_ITEM_FRAMESKIP_INDEX].title));
   strlcpy(tab->items[TAB_CUR_ITEM_SPEED_INDEX].title, TAB_CUR_ITEM_SPEED_TITLE, sizeof(tab->items[TAB_CUR_ITEM_SPEED_INDEX].title));
+  strlcpy(tab->items[TAB_CUR_ITEM_OVERCLOCK_INDEX].title, TAB_CUR_ITEM_OVERCLOCK_TITLE, sizeof(tab->items[TAB_CUR_ITEM_OVERCLOCK_INDEX].title));
   // strlcpy(tab->items[TAB_CUR_ITEM_INTERL_INDEX].title, TAB_CUR_ITEM_INTERL_TITLE, sizeof(tab->items[TAB_CUR_ITEM_INTERL_INDEX].title));
   strlcpy(tab->items[TAB_CUR_ITEM_PALETTE_INDEX].title, TAB_CUR_ITEM_PALETTE_TITLE, sizeof(tab->items[TAB_CUR_ITEM_PALETTE_INDEX].title));
   strlcpy(tab->items[TAB_CUR_ITEM_QUIT_INDEX].title, TAB_CUR_ITEM_QUIT_TITLE, sizeof(tab->items[TAB_CUR_ITEM_QUIT_INDEX].title));
@@ -581,6 +622,9 @@ menu_tab *prepare_tab_current(menu_tab *tab, emu_preferences *preferences)
   // strlcpy(tab->items[TAB_CUR_ITEM_INTERL_INDEX].value, 
   //   (preferences->config.interlacing_enabled)? "Enabled" : "Disabled",
   //   sizeof(tab->items[TAB_CUR_ITEM_INTERL_INDEX].value));
+  strlcpy(tab->items[TAB_CUR_ITEM_OVERCLOCK_INDEX].value, 
+    (preferences->config.overclock_enabled)? "Enabled" : "Disabled",
+    sizeof(tab->items[TAB_CUR_ITEM_OVERCLOCK_INDEX].value));
   strlcpy(tab->items[TAB_CUR_ITEM_PALETTE_INDEX].value, 
     preferences->palettes[preferences->config.selected_palette].name,
     sizeof(tab->items[TAB_CUR_ITEM_PALETTE_INDEX].value));
@@ -591,6 +635,8 @@ menu_tab *prepare_tab_current(menu_tab *tab, emu_preferences *preferences)
     (preferences->config.frameskip_enabled)? COLOR_SUCCESS : COLOR_DANGER;
   // tab->items[TAB_CUR_ITEM_INTERL_INDEX].value_color = 
   //   (preferences->config.interlacing_enabled)? COLOR_SUCCESS : COLOR_DANGER;
+  tab->items[TAB_CUR_ITEM_OVERCLOCK_INDEX].value_color = 
+    (preferences->config.overclock_enabled)? COLOR_SUCCESS : COLOR_DANGER;
   tab->items[TAB_CUR_ITEM_SPEED_INDEX].value_color = COLOR_SUCCESS;
   tab->items[TAB_CUR_ITEM_PALETTE_INDEX].value_color = COLOR_SUCCESS;
 
@@ -598,6 +644,7 @@ menu_tab *prepare_tab_current(menu_tab *tab, emu_preferences *preferences)
   tab->items[TAB_CUR_ITEM_FRAMESKIP_INDEX].action = action_frameskip_selection;
   tab->items[TAB_CUR_ITEM_SPEED_INDEX].action = action_speed_selection;
   // tab->items[TAB_CUR_ITEM_INTERL_INDEX].action = action_interlacing_selection;
+  tab->items[TAB_CUR_ITEM_OVERCLOCK_INDEX].action = action_overclock_selection;
   tab->items[TAB_CUR_ITEM_PALETTE_INDEX].action = action_palette_selection;
   tab->items[TAB_CUR_ITEM_QUIT_INDEX].action = action_quit_emulator;
 
