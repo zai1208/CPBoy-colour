@@ -600,6 +600,30 @@ struct gb_s
     uint32_t frame_count;
     uint8_t interlace_count : 1;
   } display;
+#if PEANUT_FULL_GBC_SUPPORT
+	/* Game Boy Color Mode*/
+	struct {
+		uint8_t cgbMode;
+		uint8_t doubleSpeed;
+		uint8_t doubleSpeedPrep;
+		uint8_t wramBank;
+		uint16_t wramBankOffset;
+		uint8_t vramBank;
+		uint16_t vramBankOffset;
+		uint16_t fixPalette[0x40];  //BG then OAM palettes fixed for the screen
+		uint8_t OAMPalette[0x40];
+		uint8_t BGPalette[0x40];
+		uint8_t OAMPaletteID;
+		uint8_t BGPaletteID;
+		uint8_t OAMPaletteInc;
+		uint8_t BGPaletteInc;
+		uint8_t dmaActive;
+		uint8_t dmaMode;
+		uint8_t dmaSize;
+		uint16_t dmaSource;
+		uint16_t dmaDest;
+	} cgb;
+#endif
 
   /**
    * Variables that may be modified directly by the front-end.
