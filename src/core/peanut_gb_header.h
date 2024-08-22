@@ -98,6 +98,10 @@
 # define PEANUT_GB_USE_INTRINSICS 1
 #endif
 
+#ifndef PEANUT_FULL_GBC_SUPPORT
+# define PEANUT_FULL_GBC_SUPPORT 0
+#endif
+
 /* Only include function prototypes. At least one file must *not* have this
  * defined. */
 #define PEANUT_GB_HEADER_ONLY
@@ -112,8 +116,13 @@
 #define ANY_INTR	0x1F
 
 /* Memory section sizes for DMG */
+#if PEANUT_FULL_GBC_SUPPORT
+#define WRAM_SIZE	0x8000
+#define VRAM_SIZE	0x4000
+#else
 #define WRAM_SIZE	0x2000
 #define VRAM_SIZE	0x2000
+#endif
 #define HRAM_IO_SIZE	0x0100
 #define OAM_SIZE	0x00A0
 
