@@ -97,6 +97,10 @@
 # define PEANUT_GB_USE_INTRINSICS 1
 #endif
 
+#ifndef PEANUT_FULL_GBC_SUPPORT
+# define PEANUT_FULL_GBC_SUPPORT 0
+#endif
+
 /* Only include function prototypes. At least one file must *not* have this
  * defined. */
 
@@ -110,8 +114,13 @@
 #define ANY_INTR	0x1F
 
 /* Memory section sizes for DMG */
+#if PEANUT_FULL_GBC_SUPPORT
+#define WRAM_SIZE	0x8000
+#define VRAM_SIZE	0x4000
+#else
 #define WRAM_SIZE	0x2000
 #define VRAM_SIZE	0x2000
+#endif
 #define HRAM_IO_SIZE	0x0100
 #define OAM_SIZE	0x00A0
 
@@ -142,6 +151,10 @@
 /* Serial clock locked to 8192Hz on DMG.
  * 4194304 / (8192 / 8) = 4096 clock cycles for sending 1 byte. */
 #define SERIAL_CYCLES       4096
+#define SERIAL_CYCLES_1KB   (SERIAL_CYCLES/1ul)
+#define SERIAL_CYCLES_2KB   (SERIAL_CYCLES/2ul)
+#define SERIAL_CYCLES_32KB  (SERIAL_CYCLES/32ul)
+#define SERIAL_CYCLES_64KB  (SERIAL_CYCLES/64ul)
 
 /* Calculating VSYNC. */
 #define DMG_CLOCK_FREQ      4194304.0
@@ -207,6 +220,10 @@
 #define OBJ_FLIP_Y          0x40
 #define OBJ_FLIP_X          0x20
 #define OBJ_PALETTE         0x10
+#if PEANUT_FULL_GBC_SUPPORT
+#define OBJ_BANK            0x08
+#define OBJ_CGB_PALETTE     0x07
+#endif
 
 #define ROM_HEADER_CHECKSUM_LOC	0x014D
 
