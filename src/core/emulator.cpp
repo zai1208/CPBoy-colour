@@ -184,6 +184,7 @@ void lcd_draw_line(struct gb_s *gb, const uint32_t pixels[160],
 	if (gb->cgb.cgbMode)
 	{
 		*DMAC_SAR_0   = (uint32_t)gb->cgb.fixPalette;  
+	}
 	else {
 #endif
   *DMAC_SAR_0   = (uint32_t)pixels;                            // P4 Area (OC-Memory) => Physical address is same as virtual
