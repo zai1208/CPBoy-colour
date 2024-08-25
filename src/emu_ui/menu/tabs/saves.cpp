@@ -26,7 +26,7 @@ menu_tab *prepare_tab_saves(menu_tab *tab, emu_preferences *preferences) {
   strcpy(tab->description, "Description");
 
   tab->item_count = 1;
-  tab->items = (menu_item *)hhk::Mem_Malloc(1 * sizeof(menu_item));
+  tab->items = (menu_item *)hhk::malloc(1 * sizeof(menu_item));
 
   if (!tab->items) {
     set_error(EMALLOC);

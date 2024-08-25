@@ -387,7 +387,7 @@ void draw_palettes_alert(palette *user_palettes, uint8_t user_palette_count,
 
 int32_t select_key_alert(uint32_t *key) {
   // Backup LCD and darken background
-  uint16_t *lcd_backup = (uint16_t *)hhk::Mem_Malloc(
+  uint16_t *lcd_backup = (uint16_t *)hhk::malloc(
       CAS_LCD_HEIGHT * CAS_LCD_WIDTH * sizeof(uint16_t));
 
   if (lcd_backup) {
@@ -414,7 +414,7 @@ int32_t select_key_alert(uint32_t *key) {
   // Close alert
   if (lcd_backup) {
     memcpy(vram, lcd_backup, CAS_LCD_HEIGHT * CAS_LCD_WIDTH * sizeof(uint16_t));
-    hhk::Mem_Free(lcd_backup);
+    hhk::free(lcd_backup);
   }
 
   wait_input_release();
@@ -426,7 +426,7 @@ int32_t controls_alert(struct gb_s *gb) {
   emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
 
   // Backup LCD and darken background
-  uint16_t *lcd_backup = (uint16_t *)hhk::Mem_Malloc(
+  uint16_t *lcd_backup = (uint16_t *)hhk::malloc(
       CAS_LCD_HEIGHT * CAS_LCD_WIDTH * sizeof(uint16_t));
 
   if (lcd_backup) {
@@ -475,7 +475,7 @@ int32_t controls_alert(struct gb_s *gb) {
   // Close alert
   if (lcd_backup) {
     memcpy(vram, lcd_backup, CAS_LCD_HEIGHT * CAS_LCD_WIDTH * sizeof(uint16_t));
-    hhk::Mem_Free(lcd_backup);
+    hhk::free(lcd_backup);
   }
 
   return 0;
@@ -483,7 +483,7 @@ int32_t controls_alert(struct gb_s *gb) {
 
 int32_t edit_palette_alert(palette *pal) {
   // Backup LCD and darken background
-  uint16_t *lcd_backup = (uint16_t *)hhk::Mem_Malloc(
+  uint16_t *lcd_backup = (uint16_t *)hhk::malloc(
       CAS_LCD_HEIGHT * CAS_LCD_WIDTH * sizeof(uint16_t));
 
   if (lcd_backup) {
@@ -567,7 +567,7 @@ int32_t edit_palette_alert(palette *pal) {
   // Close alert
   if (lcd_backup) {
     memcpy(vram, lcd_backup, CAS_LCD_HEIGHT * CAS_LCD_WIDTH * sizeof(uint16_t));
-    hhk::Mem_Free(lcd_backup);
+    hhk::free(lcd_backup);
   }
 
   return 0;
@@ -579,7 +579,7 @@ int32_t palettes_alert(struct gb_s *gb) {
   uint8_t user_palette_count = get_user_palettes(&user_palettes, gb);
 
   // Backup LCD and darken background
-  uint16_t *lcd_backup = (uint16_t *)hhk::Mem_Malloc(
+  uint16_t *lcd_backup = (uint16_t *)hhk::malloc(
       CAS_LCD_HEIGHT * CAS_LCD_WIDTH * sizeof(uint16_t));
 
   if (lcd_backup) {
@@ -660,7 +660,7 @@ int32_t palettes_alert(struct gb_s *gb) {
   // Close alert
   if (lcd_backup) {
     memcpy(vram, lcd_backup, CAS_LCD_HEIGHT * CAS_LCD_WIDTH * sizeof(uint16_t));
-    hhk::Mem_Free(lcd_backup);
+    hhk::free(lcd_backup);
   }
 
   return 0;
@@ -689,7 +689,7 @@ menu_tab *prepare_tab_settings(menu_tab *tab, emu_preferences *preferences) {
 
   tab->item_count = TAB_SETTINGS_ITEM_COUNT;
   tab->items =
-      (menu_item *)hhk::Mem_Malloc(TAB_SETTINGS_ITEM_COUNT * sizeof(menu_item));
+      (menu_item *)hhk::malloc(TAB_SETTINGS_ITEM_COUNT * sizeof(menu_item));
 
   if (!tab->items) {
     set_error(EMALLOC);
