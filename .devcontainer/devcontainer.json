@@ -19,7 +19,7 @@
 
 	// Uncomment the next line to run commands after the container is created.
 	"postCreateCommand": "cd /workspaces/${RepositoryName}",
-	"postStartCommand": "cd /workspaces/${RepositoryName} && cat WELCOME.txt",
+	"postStartCommand": "cd /workspaces/${RepositoryName} && cat BUILDING.md",
 
 	// Configure tool-specific properties.
 	// "customizations": {},
