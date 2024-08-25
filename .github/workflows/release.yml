@@ -34,7 +34,7 @@ jobs:
           tag_name: release-${{ github.run_number }}
           release_name: Release ${{ github.run_number }}
           body: |
-            New release of TarrasK
+            New release of CPBoy
           draft: false
           prerelease: false
       - name: Upload Release Asset
