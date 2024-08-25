@@ -17,7 +17,7 @@ jobs:
   build:
     name: Create a new release
     runs-on: ubuntu-latest
-    container: ghcr.io/therainbowphoenix/cp-codespace:beta-02
+    container: ghcr.io/qbos07/hollyhock-3:main
     steps:
       - uses: actions/checkout@v2
 
