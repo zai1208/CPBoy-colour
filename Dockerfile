@@ -1,4 +1,4 @@
-FROM ghcr.io/therainbowphoenix/cp-codespace:beta-02
+FROM ghcr.io/qbos07/hollyhock-3:main
 
 USER root
 
