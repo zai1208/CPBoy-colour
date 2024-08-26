@@ -24,7 +24,7 @@ jobs:
       - run: |
           echo "Runs inside a container"
           make
-          sudo apt-get install zip
+          apt-get install zip
           zip dist
           
 
