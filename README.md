@@ -53,6 +53,7 @@ If you encounter any issues with games, I will add them to this list.
 ## Building
 
 If you want to build the emulator from source you will need the [Hollyhock-2 SDK + Newlib](https://github.com/SnailMath/hollyhock-2/). Then, run ´make´ in your terminal.
+Or you can just push to your own fork of the repo and it will compile it and publish it as a release.
 
 
 ## License
