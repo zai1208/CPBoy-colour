@@ -18,7 +18,7 @@ You will need to have the [Hollyhock-2 CFW](https://github.com/SnailMath/hollyho
         └── ** Put your roms in here **
 ``` 
 
-To load your Gameboy ROMs, put them into the `/CPBoy/roms/` directory. They should have the file ending `.gb`. CPBoy should then automatically detect the roms.
+To load your Gameboy ROMs, put them into the `/CPBoy/roms/` directory. They should have the file ending `.gbc`. CPBoy should then automatically detect the roms.
 
 
 ## Controls
