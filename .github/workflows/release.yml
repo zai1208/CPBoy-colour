@@ -54,7 +54,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: dist/bin/il.bin
+          asset_path: dist/CPBoy/bin/il.bin
           asset_name: il.bin
           asset_content_type: application/octet-stream
       - name: Upload y Asset
@@ -64,7 +64,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: dist/bin/y.bin
+          asset_path: dist/CPBoy/bin/y.bin
           asset_name: y.bin
           asset_content_type: application/octet-stream
       - name: Upload ELF Asset
