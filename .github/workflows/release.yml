@@ -47,6 +47,16 @@ jobs:
           asset_path: dist/CPBoy.bin
           asset_name: CPBoy.bin
           asset_content_type: application/octet-stream
+      - name: Upload dist Asset
+        id: upload-dist-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: dist
+          asset_name: CPBoy.zip
+          asset_content_type: application/octet-stream
       - name: Upload ELF Asset
         id: upload-elf-asset
         uses: actions/upload-release-asset@v1
