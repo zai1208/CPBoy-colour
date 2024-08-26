@@ -147,7 +147,7 @@ void lcd_draw_line(struct gb_s *gb, const uint32_t pixels[160],
   const uint_fast8_t line)
 {
 	emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
-	uint32_t *ssdr = (uint32_t *)SERIAL_SCREEN_DATA_REGISTER;
+	uint32_t *ssdr = (uint32_t *)SCREEN_DATA_REGISTER;
 
   // Wait for previous DMA to complete
   dma_wait(DMAC_CHCR_0);
