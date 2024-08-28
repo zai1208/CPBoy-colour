@@ -147,7 +147,6 @@ void lcd_draw_line(struct gb_s *gb, const uint32_t pixels[160],
   const uint_fast8_t line)
 {
 	emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
-	uint32_t *ssdr = (uint32_t *)SCREEN_DATA_REGISTER;
 
   // Wait for previous DMA to complete
   dma_wait(DMAC_CHCR_0);
@@ -184,11 +183,12 @@ void lcd_draw_line(struct gb_s *gb, const uint32_t pixels[160],
 #if PEANUT_FULL_GBC_SUPPORT
 	if (gb->cgb.cgbMode)
 	{
+		uint32_t pixels_cgb;
 		for (unsigned int x = 0; x < LCD_WIDTH; x++)
 		{
-			uint16_t color = gb->cgb.fixPalette[pixels[x]];
-			*ssdr = color | (color << 16);
+			 pixels_w[x]=gb->cgb.fixPalette[pixels[x]];
 		} 
+		*DMAC_SAR_0   = (uint32_t)pixels_cgb; 
 	}
 	else {
 #endif
