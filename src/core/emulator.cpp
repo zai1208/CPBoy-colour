@@ -186,7 +186,7 @@ void lcd_draw_line(struct gb_s *gb, const uint32_t pixels[160],
 		uint32_t pixels_cgb;
 		for (unsigned int x = 0; x < LCD_WIDTH; x++)
 		{
-			 pixels_w[x]=gb->cgb.fixPalette[pixels[x]];
+			 pixels_cgb[x]=gb->cgb.fixPalette[pixels[x]];
 		} 
 		*DMAC_SAR_0   = (uint32_t)pixels_cgb; 
 	}
