@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - new-master
+      - dev-test
 
 defaults:
   run:
