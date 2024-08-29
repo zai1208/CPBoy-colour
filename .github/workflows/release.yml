@@ -24,6 +24,7 @@ jobs:
 
       - run: |
           echo "Runs inside a container"
+          apt-get --yes install texinfo
           apt-get --yes install gcc
           apt-get --yes install g++
           rm -rf ~/opt/cross/hollyhock-2/sdk/newlib
