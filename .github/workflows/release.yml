@@ -24,7 +24,7 @@ jobs:
 
       - run: |
           echo "Runs inside a container"
-          make
+          make debug
           apt-get install zip
           zip -r CPBoy.zip dist
           
