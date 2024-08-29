@@ -18,7 +18,7 @@ jobs:
   build:
     name: Create a new release
     runs-on: ubuntu-latest
-    container: ghcr.io/qbos07/hollyhock3
+    container: ghcr.io/qbos07/hollyhock3:main
     steps:
       - uses: actions/checkout@v2
 
