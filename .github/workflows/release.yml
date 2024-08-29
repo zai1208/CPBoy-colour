@@ -18,24 +18,12 @@ jobs:
   build:
     name: Create a new release
     runs-on: ubuntu-latest
-    container: ghcr.io/qbos07/hollyhock-3:main
+    container: ghcr.io/therainbowphoenix/cp-codespace:beta-02
     steps:
       - uses: actions/checkout@v2
 
       - run: |
           echo "Runs inside a container"
-          apt-get --yes install texinfo
-          apt-get --yes install gcc
-          apt-get --yes install g++
-          rm -rf ~/opt/cross/hollyhock-2/sdk/newlib
-          git clone https://github.com/diddyholz/newlib-cp2
-          cd newlib-cp2
-          mkdir build
-          cd build
-          ../configure --target=sh4-elf --prefix=$SDK_DIR/newlib
-          make all
-          make install
-          cd ../../
           make
           apt-get install zip
           zip -r CPBoy.zip dist
