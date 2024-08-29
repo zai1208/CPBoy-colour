@@ -1,14 +1,14 @@
 # Compiler and linker settings
-CC = gcc
-CFLAGS = -Wall -O2
-LDFLAGS = -Wl,-Map,output.map
+CC:=gcc
+CFLAGS:=-Wall -O2
+LDFLAGS:=-Wl,-Map,output.map
 
 # Source files
-SRCS = main.c utils.c
-OBJS = $(SRCS:.c=.o)
+SRCS:=main.c utils.c
+OBJS:=$(SRCS:.c=.o)
 
 # Output files
-TARGET = output.elf
+TARGET:=output.elf
 
 # Build rules
 all: $(TARGET)
