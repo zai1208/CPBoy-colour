@@ -8,10 +8,10 @@ SRCS:=main.c utils.c
 OBJS:=$(SRCS:.c=.o)
 
 # Output files
-TARGET:=output.elf
+DEBUG:=output.elf
 
 # Build rules
-all: $(TARGET)
+debug: $(DEBUG)
 
 $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) -o $(TARGET) $(LDFLAGS)
