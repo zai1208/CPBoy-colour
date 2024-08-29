@@ -14,10 +14,10 @@ TARGET:=output.elf
 all: $(TARGET)
 
 $(TARGET): $(OBJS)
-    $(CC) $(CFLAGS) $(OBJS) -o $(TARGET) $(LDFLAGS)
+	$(CC) $(CFLAGS) $(OBJS) -o $(TARGET) $(LDFLAGS)
 
 %.o: %.c
-    $(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-    rm -f $(OBJS) $(TARGET) output.map
+	rm -f $(OBJS) $(TARGET) output.map
