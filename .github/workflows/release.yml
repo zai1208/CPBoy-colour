@@ -30,7 +30,8 @@ jobs:
           mkdir build
           cd build
           ../configure --target=sh4-elf --prefix=$SDK_DIR/newlib
-          make
+          make all
+          make install
           cd ../../
           make
           apt-get install zip
