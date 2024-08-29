@@ -24,6 +24,14 @@ jobs:
 
       - run: |
           echo "Runs inside a container"
+          rm -rf ~/opt/cross/hollyhock-2/sdk/newlib
+          git clone https://github.com/diddyholz/newlib-cp2
+          cd newlib-cp2
+          mkdir build
+          cd build
+          ../configure --target=sh-elf --prefix=sh4-elf
+          make
+          cd ../../
           make
           apt-get install zip
           zip -r CPBoy.zip dist
