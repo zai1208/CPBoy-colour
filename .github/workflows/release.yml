@@ -29,7 +29,7 @@ jobs:
           cd newlib-cp2
           mkdir build
           cd build
-          ../configure --target=sh-elf --prefix=sh4-elf
+          ../configure --target=sh4-elf --prefix=$SDK_DIR/newlib
           make
           cd ../../
           make
