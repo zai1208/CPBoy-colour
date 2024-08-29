@@ -24,8 +24,8 @@ jobs:
 
       - run: |
           echo "Runs inside a container"
-          apt-get install gcc
-          apt-get install g++
+          apt-get --yes install gcc
+          apt-get --yes install g++
           rm -rf ~/opt/cross/hollyhock-2/sdk/newlib
           git clone https://github.com/diddyholz/newlib-cp2
           cd newlib-cp2
