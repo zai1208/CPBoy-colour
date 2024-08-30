@@ -6,6 +6,7 @@ on:
       - master
       - new-master
       - dev-test
+      - dev
 
 defaults:
   run:
