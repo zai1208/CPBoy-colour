@@ -48,26 +48,6 @@ hhk: $(APP_ELF) Makefile
 
 all: $(APP_ELF) $(APP_BIN) $(IL_BIN) $(Y_BIN) Makefile
 
-# Compiler and linker settings
-CFLAGS:=-Wall -O2
-LDFLAGS:=-Wl,-Map,output.map
-
-# Source files
-SRCS:=main.c utils.c
-OBJS:=$(SRCS:.c=.o)
-
-# Output files
-DEBUG:=output.elf
-
-# Build rules
-debug: $(DEBUG)
-
-$(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) $(OBJS) -o $(TARGET) $(LDFLAGS)
-
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
 clean:
 	rm -rf $(BUILDDIR) $(OUTDIR)
 
