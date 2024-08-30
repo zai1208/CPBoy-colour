@@ -38,7 +38,7 @@ menu_tab *prepare_tab_load(menu_tab *tab) {
   tab->item_count =
       find_files(DIRECTORY_ROM "\\*" EXTENSION_ROM, files, TAB_LOAD_ITEM_COUNT);
   tab->items =
-      (menu_item *)hhk::malloc(tab->item_count * sizeof(menu_item));
+      (menu_item *)malloc(tab->item_count * sizeof(menu_item));
 
   if (!(tab->items)) {
     set_error(EMALLOC);
