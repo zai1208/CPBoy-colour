@@ -189,7 +189,7 @@ int32_t frameskip_alert(struct gb_s *gb) {
   emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
 
   // Backup LCD and darken background
-  uint16_t *lcd_backup = (uint16_t *)hhk::malloc(
+  uint16_t *lcd_backup = (uint16_t *)malloc(
       CAS_LCD_HEIGHT * CAS_LCD_WIDTH * sizeof(uint16_t));
 
   if (lcd_backup) {
@@ -236,7 +236,7 @@ int32_t frameskip_alert(struct gb_s *gb) {
   // Close alert
   if (lcd_backup) {
     memcpy(vram, lcd_backup, CAS_LCD_HEIGHT * CAS_LCD_WIDTH * sizeof(uint16_t));
-    hhk::free(lcd_backup);
+    free(lcd_backup);
   }
 
   return 0;
@@ -246,7 +246,7 @@ int32_t emu_speed_alert(struct gb_s *gb) {
   emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
 
   // Backup LCD and darken background
-  uint16_t *lcd_backup = (uint16_t *)hhk::malloc(
+  uint16_t *lcd_backup = (uint16_t *)malloc(
       CAS_LCD_HEIGHT * CAS_LCD_WIDTH * sizeof(uint16_t));
 
   if (lcd_backup) {
@@ -289,7 +289,7 @@ int32_t emu_speed_alert(struct gb_s *gb) {
   // Close alert
   if (lcd_backup) {
     memcpy(vram, lcd_backup, CAS_LCD_HEIGHT * CAS_LCD_WIDTH * sizeof(uint16_t));
-    hhk::free(lcd_backup);
+    free(lcd_backup);
   }
 
   return 0;
@@ -299,7 +299,7 @@ int32_t palette_selection_alert(struct gb_s *gb) {
   emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
 
   // Backup LCD and darken background
-  uint16_t *lcd_backup = (uint16_t *)hhk::malloc(
+  uint16_t *lcd_backup = (uint16_t *)malloc(
       CAS_LCD_HEIGHT * CAS_LCD_WIDTH * sizeof(uint16_t));
 
   if (lcd_backup) {
@@ -347,7 +347,7 @@ int32_t palette_selection_alert(struct gb_s *gb) {
   // Close alert
   if (lcd_backup) {
     memcpy(vram, lcd_backup, CAS_LCD_HEIGHT * CAS_LCD_WIDTH * sizeof(uint16_t));
-    hhk::free(lcd_backup);
+    free(lcd_backup);
   }
 
   return 0;
@@ -472,7 +472,7 @@ menu_tab *prepare_tab_current(menu_tab *tab, emu_preferences *preferences) {
 
   tab->item_count = TAB_CUR_ITEM_COUNT;
   tab->items =
-      (menu_item *)hhk::malloc(TAB_CUR_ITEM_COUNT * sizeof(menu_item));
+      (menu_item *)malloc(TAB_CUR_ITEM_COUNT * sizeof(menu_item));
 
   if (!tab->items) {
     set_error(EMALLOC);
