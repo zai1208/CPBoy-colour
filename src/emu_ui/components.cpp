@@ -9,6 +9,7 @@
 #include <sdk/os/debug.hpp>
 #include <stdint.h>
 #include <string.h>
+#include <stdlib.h>
 
 // Use namespace because of conflicting function declarations in mem.hpp and
 // string.h
