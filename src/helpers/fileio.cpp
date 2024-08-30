@@ -105,7 +105,7 @@ uint8_t _read_file(const char *file, void *buf, size_t len, const char *err_file
     return 1;
   }
 
-	if (read(fd, buf, len) < 0)
+	if (File_Read(fd, buf, len) < 0)
   {
 	  File_Close(fd);
 
