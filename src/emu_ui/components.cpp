@@ -165,7 +165,7 @@ uint32_t draw_alert_box(const char *title, const char *subtitle, uint16_t width,
 void ok_alert(const char *title, const char *subtitle, const char *text,
               uint16_t foreground, uint16_t background, uint16_t border) {
   // Backup LCD and darken background
-  uint16_t *lcd_backup = (uint16_t *)hhk::malloc(
+  uint16_t *lcd_backup = (uint16_t *)malloc(
       CAS_LCD_HEIGHT * CAS_LCD_WIDTH * sizeof(uint16_t));
 
   if (lcd_backup) {
@@ -236,6 +236,6 @@ void ok_alert(const char *title, const char *subtitle, const char *text,
   // Close alert
   if (lcd_backup) {
     memcpy(vram, lcd_backup, CAS_LCD_HEIGHT * CAS_LCD_WIDTH * sizeof(uint16_t));
-    hhk::free(lcd_backup);
+    free(lcd_backup);
   }
 }
