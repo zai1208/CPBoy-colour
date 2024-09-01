@@ -19,7 +19,7 @@ jobs:
   build:
     name: Create a new release
     runs-on: ubuntu-latest
-    container: ghcr.io/qbos07/hollyhock-3:main
+    container: ghcr.io/zai1208/sh4-devenv-gitpod:master
     steps:
       - uses: actions/checkout@v2
 
