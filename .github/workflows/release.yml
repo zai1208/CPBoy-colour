@@ -25,7 +25,7 @@ jobs:
       - run: |
           echo "Runs inside a container"
           make
-          echo "dev" | sudo -S apt-get install zip
+          echo "dev" | sudo -S apt-get install zip --yes
           zip -r CPBoy.zip dist
           
 
