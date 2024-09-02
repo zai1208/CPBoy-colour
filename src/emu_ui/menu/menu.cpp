@@ -18,6 +18,7 @@
 #include "tabs/settings.h"
 #include <sdk/calc/calc.hpp>
 #include <sdk/os/input.hpp>
+#include <sdk/os/debug.hpp>
 #include <sdk/os/lcd.hpp>
 #include <stdint.h>
 #include <stdlib.h>
@@ -270,6 +271,7 @@ uint8_t load_menu(emu_preferences *prefs) {
       dummy_gb.direct.priv = prefs;
 
       // Execute action
+      Debug_PrintString("REACHED", false);
       return_code = load_menu.tabs[load_menu.selected_tab]
                         .items[load_menu.selected_item]
                         .action(&(load_menu.tabs[load_menu.selected_tab]
