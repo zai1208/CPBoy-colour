@@ -401,6 +401,8 @@ uint8_t run_emulator(struct gb_s *gb, emu_preferences *prefs)
     default:
       break;
   }
+	Debug_SetCursorPosition(0, 0);
+	Debug_PrintString("REACHED BEYOND LOAD MENU", false);
 
   // Emulator rom load, execute and unload loop
   while (!exit_emulator)
