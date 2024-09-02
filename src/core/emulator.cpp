@@ -240,7 +240,10 @@ void gb_error(struct gb_s *gb, const enum gb_error_e gb_err, const uint16_t val)
 
 uint8_t prepare_emulator(struct gb_s *gb, emu_preferences *preferences)
 {
+
+  Debug_PrintString("REACHED 2", false);
   enum gb_init_error_e gb_ret;
+
 
   // Initialise emulator context
   gb_ret = gb_init(gb, &gb_error, preferences, gb_wram, gb_vram, gb_oam, gb_hram_io, preferences->rom);
