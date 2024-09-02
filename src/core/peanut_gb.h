@@ -499,6 +499,7 @@ uint8_t __attribute__((section(".oc_mem.il.text"))) __gb_read(struct gb_s *gb, u
 		case 0xF:
 		if(addr < OAM_ADDR)
 #if PEANUT_FULL_GBC_SUPPORT
+			break;
 			return gb->wram[(addr - 0x2000) - gb->cgb.wramBankOffset];
 #else
 			goto normal_read;
