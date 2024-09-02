@@ -461,6 +461,8 @@ uint8_t load_rom(emu_preferences *prefs)
   char rom_filename[MAX_FILENAME_LEN] = DIRECTORY_ROM "\\";
   strncat(rom_filename, prefs->current_filename, MAX_FILENAME_LEN - 1);
   rom_filename[MAX_FILENAME_LEN - 1] = '\0';
+	Debug_SetCursorPosition(0, 0);
+	Debug_PrintString("REACHED 3", false);
 
   size_t rom_size;
 	
@@ -468,6 +470,8 @@ uint8_t load_rom(emu_preferences *prefs)
   {
     return 1;
   }
+	Debug_SetCursorPosition(0, 0);
+	Debug_PrintString("REACHED 4", false);
 
 	// dynamically allocate space for rom in heap
 	prefs->rom = (uint8_t *)malloc(rom_size);
@@ -475,6 +479,8 @@ uint8_t load_rom(emu_preferences *prefs)
 	// check if pointer to rom is no nullptr
 	if (!prefs->rom)
   {
+	  Debug_SetCursorPosition(0, 0);
+	Debug_PrintString("REACHED ACTUALLY", false);
     char err_info[ERROR_MAX_INFO_LEN];
     char tmp[20];
 
@@ -485,6 +491,8 @@ uint8_t load_rom(emu_preferences *prefs)
     set_error_i(EMALLOC, err_info);
 		return 1;
   }
+	Debug_SetCursorPosition(0, 0);
+	Debug_PrintString("REACHED 5", false);
 
   if(read_file(rom_filename, prefs->rom, rom_size) != 0)
   {
