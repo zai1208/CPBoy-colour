@@ -412,6 +412,7 @@ uint8_t run_emulator(struct gb_s *gb, emu_preferences *prefs)
     {
       return 1;
     }
+	  Debug_PrintString("REACHED 2", false);
 
     if (prepare_emulator(gb, prefs) != 0)
     {
