@@ -11,6 +11,7 @@
 #include "../../input.h"
 #include "../menu.h"
 #include <sdk/os/input.hpp>
+#include <sdk/os/debug.hpp>
 #include <stdlib.h>
 #include <string.h>
 
@@ -22,6 +23,7 @@ namespace hhk {
 #define TAB_LOAD_ITEM_COUNT 20
 
 int32_t action_set_romfile(menu_item *item, gb_s *gb) {
+  Debug_PrintString("REACHED 2", false);
   emu_preferences *prefs = (emu_preferences *)gb->direct.priv;
 
   strlcpy(prefs->current_filename, item->title,
