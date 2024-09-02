@@ -1,4 +1,4 @@
-FROM ghcr.io/qbos07/hollyhock-3:main
+FROM ghcr.io/zai1208/sh4-devenv-gitpod:master
 
 USER root
 
