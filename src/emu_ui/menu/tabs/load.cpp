@@ -23,7 +23,6 @@ namespace hhk {
 #define TAB_LOAD_ITEM_COUNT 20
 
 int32_t action_set_romfile(menu_item *item, gb_s *gb) {
-  Debug_PrintString("REACHED 2", false);
   emu_preferences *prefs = (emu_preferences *)gb->direct.priv;
 
   strlcpy(prefs->current_filename, item->title,
