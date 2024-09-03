@@ -462,6 +462,7 @@ uint8_t load_rom(emu_preferences *prefs)
 {
 	Debug_SetCursorPosition(0, 0);
 	Debug_PrintString("REACHED BEFORE ERROR", false);
+	LCD_Refresh();
   char rom_filename[MAX_FILENAME_LEN] = DIRECTORY_ROM "\\";
   strncat(rom_filename, prefs->current_filename, MAX_FILENAME_LEN - 1);
   rom_filename[MAX_FILENAME_LEN - 1] = '\0';
