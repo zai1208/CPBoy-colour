@@ -3547,8 +3547,14 @@ void gb_reset(struct gb_s *gb)
 	gb->memory_map[0x1] = gb->memory_map[0x0] + 0x1000;
 	gb->memory_map[0x2] = gb->memory_map[0x0] + 0x2000;
 	gb->memory_map[0x3] = gb->memory_map[0x0] + 0x3000;
+	Debug_SetCursorPosition(0,2);
+	Debug_PrintString("1", false);
+	LCD_Refresh();
 
 	__set_rom_bank(gb);
+	Debug_SetCursorPosition(0,2);
+	Debug_PrintString("2", false);
+	LCD_Refresh();
 	
 	gb->memory_map[0x8] = gb->vram;
 	gb->memory_map[0x9] = gb->memory_map[0x8] + 0x1000;
