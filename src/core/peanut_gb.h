@@ -3558,8 +3558,14 @@ void gb_reset(struct gb_s *gb)
 	
 	gb->memory_map[0x8] = gb->vram;
 	gb->memory_map[0x9] = gb->memory_map[0x8] + 0x1000;
+	Debug_SetCursorPosition(0,2);
+	Debug_PrintString("3", false);
+	LCD_Refresh();
 	
 	__set_cram_bank(gb);
+	Debug_SetCursorPosition(0,2);
+	Debug_PrintString("4", false);
+	LCD_Refresh();
 
 	gb->memory_map[0xC] = gb->wram;
 	gb->memory_map[0xD] = gb->memory_map[0xC] + 0x1000;
