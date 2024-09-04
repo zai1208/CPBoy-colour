@@ -3739,7 +3739,7 @@ enum gb_init_error_e gb_init(struct gb_s *gb,
 	/* Check if cartridge type is supported, and set MBC type. */
 	{
 #if PEANUT_FULL_GBC_SUPPORT
-		gb->cgb.cgbMode = (gb->rom[cgb_flag] & 0x80) >> 7;
+		gb->cgb.cgbMode = (gb->gb_rom_read(gb, cgb_flag) & 0x80) >> 7;
 #endif
 		const uint8_t mbc_value = gb->rom[mbc_location];
 
