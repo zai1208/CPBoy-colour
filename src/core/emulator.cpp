@@ -269,6 +269,9 @@ uint8_t prepare_emulator(struct gb_s *gb, emu_preferences *preferences)
       set_error(EEMUGEN);
       return 1;
   }
+	Debug_SetCursorPosition(0, 0);
+  Debug_PrintString("ERROR NO?", false);
+	LCD_Refresh();
 
   // Init gameboy rtc (Just zero everything)
   struct tm time;
@@ -310,6 +313,9 @@ uint8_t prepare_emulator(struct gb_s *gb, emu_preferences *preferences)
   // Set default flags
   preferences->emulator_paused = false;
 
+	Debug_SetCursorPosition(0, 0);
+  Debug_PrintString("REACHED END OF EMULATOR", false);
+	LCD_Refresh();
   return 0;
 }
 
