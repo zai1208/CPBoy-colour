@@ -3675,9 +3675,15 @@ enum gb_init_error_e gb_init(struct gb_s *gb,
 					 uint8_t *hram_io,
 					 uint8_t *rom)
 {
+	Debug_SetCursorPosition(0,1);
+	Debug_PrintString("R 1");
+	LCD_Refresh();
 #if PEANUT_FULL_GBC_SUPPORT
 	const uint16_t cgb_flag = 0x0143;
 #endif
+	Debug_SetCursorPosition(0,1);
+	Debug_PrintString("R 2");
+	LCD_Refresh();
 	const uint16_t mbc_location = 0x0147;
 	const uint16_t bank_count_location = 0x0148;
 	const uint16_t ram_size_location = 0x0149;
@@ -3738,6 +3744,9 @@ enum gb_init_error_e gb_init(struct gb_s *gb,
 
 	/* Check if cartridge type is supported, and set MBC type. */
 	{
+		Debug_SetCursorPosition(0,1);
+	Debug_PrintString("R 2");
+	LCD_Refresh();
 #if PEANUT_FULL_GBC_SUPPORT
 		gb->cgb.cgbMode = (gb->rom[cgb_flag] & 0x80) >> 7;
 #endif
@@ -3746,11 +3755,17 @@ enum gb_init_error_e gb_init(struct gb_s *gb,
 		if(mbc_value > sizeof(cart_mbc) - 1 ||
 				(gb->mbc = cart_mbc[mbc_value]) == -1)
 			return GB_INIT_CARTRIDGE_UNSUPPORTED;
+	Debug_SetCursorPosition(0,1);
+	Debug_PrintString("R 3");
+	LCD_Refresh();
 	}
 
 	gb->cart_ram = cart_ram[gb->rom[mbc_location]];
 	gb->num_rom_banks_mask = num_rom_banks_mask[gb->rom[bank_count_location]] - 1;
 	gb->num_ram_banks = num_ram_banks[gb->rom[ram_size_location]];
+	Debug_SetCursorPosition(0,1);
+	Debug_PrintString("R 4");
+	LCD_Refresh();
 
 	/* Note that MBC2 will appear to have no RAM banks, but it actually
 	 * always has 512 half-bytes of RAM. Hence, gb->num_ram_banks must be
@@ -3758,6 +3773,9 @@ enum gb_init_error_e gb_init(struct gb_s *gb,
 
 	gb->lcd_blank = 0;
 	gb->display.lcd_draw_line = NULL;
+	Debug_SetCursorPosition(0,1);
+	Debug_PrintString("R 5");
+	LCD_Refresh();
 
 	gb_reset(gb);
 
