@@ -415,10 +415,12 @@ uint8_t run_emulator(struct gb_s *gb, emu_preferences *prefs)
       return 1;
     }
 	  Debug_PrintString("REACHED 2", false);
+	  LCD_Refresh();
 
     if (prepare_emulator(gb, prefs) != 0)
     {
-      Debug_PrintString("REACHED 2", false);
+      Debug_PrintString("REACHED 4", false);
+	    LCD_Refresh();
       return 1;
     }    
     
@@ -486,6 +488,7 @@ uint8_t load_rom(emu_preferences *prefs)
   {
 	  Debug_SetCursorPosition(0, 0);
 	Debug_PrintString("REACHED ACTUALLY", false);
+	  LCD_Refresh();
     char err_info[ERROR_MAX_INFO_LEN];
     char tmp[20];
 
@@ -498,6 +501,7 @@ uint8_t load_rom(emu_preferences *prefs)
   }
 	Debug_SetCursorPosition(0, 0);
 	Debug_PrintString("REACHED 5", false);
+	LCD_Refresh();
 
   if(read_file(rom_filename, prefs->rom, rom_size) != 0)
   {
