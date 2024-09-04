@@ -254,7 +254,7 @@ uint8_t prepare_emulator(struct gb_s *gb, emu_preferences *preferences)
   Debug_PrintString("BEFORE ERROR", false);
 	LCD_Refresh();
   gb_ret = gb_init(gb, &gb_error, preferences, gb_wram, gb_vram, gb_oam, gb_hram_io, preferences->rom);
-	Debug_SetCursorPosition(0, 0);
+	Debug_SetCursorPosition(0, 1);
   Debug_PrintString("AFTER ERROR", false);
 	LCD_Refresh();
   
