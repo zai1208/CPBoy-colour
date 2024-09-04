@@ -212,6 +212,9 @@ void gb_error(struct gb_s *gb, const enum gb_error_e gb_err, const uint16_t val)
 {
   switch(gb_err)
   {
+	  Debug_SetCursorPosition(0, 1);
+  Debug_PrintString("REACHED START ERROR", false);
+	LCD_Refresh();
     case GB_INVALID_OPCODE:
       Debug_Printf(0, 0, false, 0, "Invalid opcode %#04x at PC: %#06x, SP: %#06x\n",
         val,
