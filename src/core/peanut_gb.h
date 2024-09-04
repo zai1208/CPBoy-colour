@@ -3562,8 +3562,14 @@ void gb_reset(struct gb_s *gb)
 	gb->memory_map[0xF] = gb->memory_map[0xD];
 
 	/* Use values as though the boot ROM was already executed. */
+	Debug_SetCursorPosition(0,1);
+	Debug_PrintString("R 6.1", false);
+	LCD_Refresh();
 	if(gb->gb_bootrom_read == NULL)
 	{
+		Debug_SetCursorPosition(0,1);
+	Debug_PrintString("R 6.2", false);
+	LCD_Refresh();
 		uint8_t hdr_chk;
 		hdr_chk = gb->rom[ROM_HEADER_CHECKSUM_LOC] != 0;
 
@@ -3585,6 +3591,9 @@ void gb_reset(struct gb_s *gb)
 #if PEANUT_FULL_GBC_SUPPORT
 		if(gb->cgb.cgbMode)
 		{
+			Debug_SetCursorPosition(0,1);
+	Debug_PrintString("R 6.3", false);
+	LCD_Refresh();
 			gb->cpu_reg.a = 0x11;
 			gb->cpu_reg.f_bits.z = 1;
 			gb->cpu_reg.f_bits.n = 0;
@@ -3596,8 +3605,13 @@ void gb_reset(struct gb_s *gb)
 			gb->hram_io[IO_DIV] = 0xFF;
 		}
 #endif
-
+Debug_SetCursorPosition(0,1);
+	Debug_PrintString("R 6.4", false);
+	LCD_Refresh();
 		memset(gb->vram, 0x00, VRAM_SIZE);
+		Debug_SetCursorPosition(0,1);
+	Debug_PrintString("R 6.5", false);
+	LCD_Refresh();
 	}
 	else
 	{
@@ -3634,15 +3648,24 @@ void gb_reset(struct gb_s *gb)
 	gb->hram_io[IO_SCX ] = 0x00;
 	gb->hram_io[IO_LY  ] = 0x00;
 	gb->hram_io[IO_LYC ] = 0x00;
+	Debug_SetCursorPosition(0,1);
+	Debug_PrintString("R 8", false);
+	LCD_Refresh();
 	__gb_write(gb, 0xFF47, 0xFC); // BGP
 	__gb_write(gb, 0xFF48, 0xFF); // OBJP0
 	__gb_write(gb, 0xFF49, 0xFF); // OBJP1
+	Debug_SetCursorPosition(0,1);
+	Debug_PrintString("R 9", false);
+	LCD_Refresh();
 	gb->hram_io[IO_WY] = 0x00;
 	gb->hram_io[IO_WX] = 0x00;
 	gb->hram_io[IO_IE] = 0x00;
 	gb->hram_io[IO_IF] = 0xE1;
 #if PEANUT_FULL_GBC_SUPPORT
 	/* Initialize some CGB registers */
+	Debug_SetCursorPosition(0,1);
+	Debug_PrintString("R 10", false);
+	LCD_Refresh();
 	gb->cgb.doubleSpeed = 0;
 	gb->cgb.doubleSpeedPrep = 0;
 	gb->cgb.wramBank = 1;
@@ -3663,6 +3686,9 @@ void gb_reset(struct gb_s *gb)
 	gb->cgb.dmaSize = 0;
 	gb->cgb.dmaSource = 0;
 	gb->cgb.dmaDest = 0;
+	Debug_SetCursorPosition(0,1);
+	Debug_PrintString("R 11", false);
+	LCD_Refresh();
 #endif
 }
 
