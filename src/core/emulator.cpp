@@ -241,7 +241,8 @@ void gb_error(struct gb_s *gb, const enum gb_error_e gb_err, const uint16_t val)
 uint8_t prepare_emulator(struct gb_s *gb, emu_preferences *preferences)
 {
 
-  Debug_PrintString("REACHED 2", false);
+  Debug_PrintString("REACHED EMULATOR", false);
+	LCD_Refresh();
   enum gb_init_error_e gb_ret;
 
 
