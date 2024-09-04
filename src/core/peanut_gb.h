@@ -3782,6 +3782,10 @@ enum gb_init_error_e gb_init(struct gb_s *gb,
 
 	gb_reset(gb);
 
+	Debug_SetCursorPosition(0,1);
+	Debug_PrintString("R 7", false);
+	LCD_Refresh();
+
 	return GB_INIT_NO_ERROR;
 }
 
