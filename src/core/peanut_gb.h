@@ -434,15 +434,25 @@ void __attribute__((section(".oc_mem.il.text"))) __set_rom_bank(struct gb_s *gb)
 
 void __attribute__((section(".oc_mem.il.text"))) __set_cram_bank(struct gb_s *gb)
 {
+	Debug_SetCursorPosition(0,3);
+	Debug_PrintString("1", false);
+	LCD_Refresh();
 	uint8_t *cram = gb->wram;
+
 
 	if(gb->mbc == 3 && gb->cart_ram_bank >= 0x08)
 	{
+Debug_SetCursorPosition(0,3);
+	Debug_PrintString("2", false);
+	LCD_Refresh();
 		/* This will definitely introduce problems, but lets try it anyway */
 		cram = gb->cart_rtc + (gb->cart_ram_bank - 0x08);
 	}
 	else if(gb->cart_ram && gb->enable_cart_ram)
 	{
+		Debug_SetCursorPosition(0,3);
+	Debug_PrintString("3", false);
+	LCD_Refresh();
 		if(gb->mbc == 2)
 		{
 			/* Only 9 bits are available in address. */
