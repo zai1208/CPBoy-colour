@@ -247,13 +247,7 @@ uint8_t prepare_emulator(struct gb_s *gb, emu_preferences *preferences)
 
 
   // Initialise emulator context
-	Debug_SetCursorPosition(0,0);
-	  Debug_PrintString("REACHED 2", false);
-	  LCD_Refresh();
   gb_ret = gb_init(gb, &gb_error, preferences, gb_wram, gb_vram, gb_oam, gb_hram_io, preferences->rom);
-	Debug_SetCursorPosition(0,0);
-	  Debug_PrintString("REACHED 3", false);
-	  LCD_Refresh();
   
   // Add ROM name to preference struct
   gb_get_rom_name(gb, preferences->current_rom_name);
@@ -426,20 +420,11 @@ uint8_t run_emulator(struct gb_s *gb, emu_preferences *prefs)
     {
       return 1;
     }
-	  	Debug_SetCursorPosition(0,0);
-	  Debug_PrintString("REACHED -1", false);
-	  LCD_Refresh();
 
     if (prepare_emulator(gb, prefs) != 0)
     {
-	    	Debug_SetCursorPosition(0,0);
-	  Debug_PrintString("REACHED 0", false);
-	  LCD_Refresh();
       return 1;
     }   
-	  	Debug_SetCursorPosition(0,0);
-	  Debug_PrintString("REACHED 1", false);
-	  LCD_Refresh();
 	  
     
     // Render preview of menu
