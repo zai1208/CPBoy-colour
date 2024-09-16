@@ -45,7 +45,6 @@ SECTIONS {
   . = y_mem_addr;
 
   .oc_mem.y : {
-    *(.oc_mem.y.dma)
     *(.oc_mem.y.text)
     *(.oc_mem.y.data)
   }
