@@ -340,7 +340,13 @@ uint8_t close_rom(struct gb_s *gb)
 
 uint8_t execute_rom(struct gb_s *gb) 
 {
+	Debug_SetCursorPosition(0,0);
+	  Debug_PrintString("REACHED -1", false);
+	  LCD_Refresh();
   emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
+	Debug_SetCursorPosition(0,0);
+	  Debug_PrintString("REACHED 0", false);
+	  LCD_Refresh();
   frametime_counter_set(gb);
 	Debug_SetCursorPosition(0,0);
 	  Debug_PrintString("REACHED 1", false);
