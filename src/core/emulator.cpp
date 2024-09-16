@@ -415,15 +415,15 @@ uint8_t run_emulator(struct gb_s *gb, emu_preferences *prefs)
     {
       return 1;
     }
-	  Debug_PrintString("REACHED 2", false);
-	  LCD_Refresh();
+	  
 
     if (prepare_emulator(gb, prefs) != 0)
     {
-      Debug_PrintString("REACHED 4", false);
-	    LCD_Refresh();
       return 1;
-    }    
+    }   
+	  Debug_SetCursorPosition(0,0);
+	  Debug_PrintString("REACHED", false);
+	  LCD_Refresh();
     
     // Render preview of menu
     fillScreen(0x0000);
