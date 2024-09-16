@@ -415,7 +415,7 @@
 #define IO_STAT_MODE_VBLANK_OR_TRANSFER_MASK 0x1
 
 /* Two pixel arrays for double buffering */
-uint32_t lcd_pixels[2][LCD_WIDTH] __attribute__((section(".oc_mem.y.dma")));
+uint32_t lcd_pixels[2][LCD_WIDTH] __attribute__((section(".oc_mem.y.data")));
 
 void __attribute__((section(".oc_mem.il.text"))) __set_rom_bank(struct gb_s *gb)
 {
