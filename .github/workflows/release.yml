@@ -27,7 +27,8 @@ jobs:
           echo "Runs inside a container"
           make
           echo "dev" | sudo -S apt-get install zip --yes
-          zip -r CPBoy.zip dist
+          rm -rf dist/CPBoy.elf
+          zip -r CPBoy.zip dist/*
           
 
       - name: Create Release
@@ -42,16 +43,6 @@ jobs:
             New release of CPBoy
           draft: false
           prerelease: false
-      - name: Upload ELF Asset
-        id: upload-elf-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: dist/CPBoy.elf
-          asset_name: CPBoy.elf
-          asset_content_type: application/octet-stream
       - name: Upload dist Asset
         id: upload-dist-asset
         uses: actions/upload-release-asset@v1
