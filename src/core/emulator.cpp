@@ -210,9 +210,7 @@ void lcd_draw_line(struct gb_s *gb, const uint32_t pixels[160],
 // TODO: Correctly implement this
 void gb_error(struct gb_s *gb, const enum gb_error_e gb_err, const uint16_t val)
 {
-	Debug_SetCursorPosition(0, 1);
-  Debug_PrintString("REACHED START ERROR", false);
-	LCD_Refresh();
+
   switch(gb_err)
   {
 	  
@@ -244,20 +242,12 @@ void gb_error(struct gb_s *gb, const enum gb_error_e gb_err, const uint16_t val)
 
 uint8_t prepare_emulator(struct gb_s *gb, emu_preferences *preferences)
 {
-	Debug_SetCursorPosition(0, 0);
-  Debug_PrintString("REACHED EMULATOR", false);
-	LCD_Refresh();
+
   enum gb_init_error_e gb_ret;
 
 
   // Initialise emulator context
-	Debug_SetCursorPosition(0, 0);
-  Debug_PrintString("BEFORE ERROR", false);
-	LCD_Refresh();
   gb_ret = gb_init(gb, &gb_error, preferences, gb_wram, gb_vram, gb_oam, gb_hram_io, preferences->rom);
-	Debug_SetCursorPosition(0, 1);
-  Debug_PrintString("AFTER ERROR", false);
-	LCD_Refresh();
   
   // Add ROM name to preference struct
   gb_get_rom_name(gb, preferences->current_rom_name);
@@ -279,9 +269,6 @@ uint8_t prepare_emulator(struct gb_s *gb, emu_preferences *preferences)
       set_error(EEMUGEN);
       return 1;
   }
-	Debug_SetCursorPosition(0, 0);
-  Debug_PrintString("ERROR NO?", false);
-	LCD_Refresh();
 
   // Init gameboy rtc (Just zero everything)
   struct tm time;
@@ -323,9 +310,7 @@ uint8_t prepare_emulator(struct gb_s *gb, emu_preferences *preferences)
   // Set default flags
   preferences->emulator_paused = false;
 
-	Debug_SetCursorPosition(0, 0);
-  Debug_PrintString("REACHED END OF EMULATOR", false);
-	LCD_Refresh();
+
   return 0;
 }
 
@@ -418,8 +403,7 @@ uint8_t run_emulator(struct gb_s *gb, emu_preferences *prefs)
     default:
       break;
   }
-	Debug_SetCursorPosition(0, 0);
-	Debug_PrintString("REACHED BEYOND LOAD MENU", false);
+
 
   // Emulator rom load, execute and unload loop
   while (!exit_emulator)
@@ -479,14 +463,10 @@ uint8_t run_emulator(struct gb_s *gb, emu_preferences *prefs)
 
 uint8_t load_rom(emu_preferences *prefs)
 {
-	Debug_SetCursorPosition(0, 0);
-	Debug_PrintString("REACHED BEFORE ERROR", false);
-	LCD_Refresh();
   char rom_filename[MAX_FILENAME_LEN] = DIRECTORY_ROM "\\";
   strncat(rom_filename, prefs->current_filename, MAX_FILENAME_LEN - 1);
   rom_filename[MAX_FILENAME_LEN - 1] = '\0';
-	Debug_SetCursorPosition(0, 0);
-	Debug_PrintString("REACHED 3", false);
+
 
   size_t rom_size;
 	
@@ -494,8 +474,7 @@ uint8_t load_rom(emu_preferences *prefs)
   {
     return 1;
   }
-	Debug_SetCursorPosition(0, 0);
-	Debug_PrintString("REACHED 4", false);
+
 
 	// dynamically allocate space for rom in heap
 	prefs->rom = (uint8_t *)malloc(rom_size);
@@ -503,9 +482,7 @@ uint8_t load_rom(emu_preferences *prefs)
 	// check if pointer to rom is no nullptr
 	if (!prefs->rom)
   {
-	  Debug_SetCursorPosition(0, 0);
-	Debug_PrintString("REACHED ACTUALLY", false);
-	  LCD_Refresh();
+
     char err_info[ERROR_MAX_INFO_LEN];
     char tmp[20];
 
@@ -516,9 +493,7 @@ uint8_t load_rom(emu_preferences *prefs)
     set_error_i(EMALLOC, err_info);
 		return 1;
   }
-	Debug_SetCursorPosition(0, 0);
-	Debug_PrintString("REACHED 5", false);
-	LCD_Refresh();
+
 
   if(read_file(rom_filename, prefs->rom, rom_size) != 0)
   {
