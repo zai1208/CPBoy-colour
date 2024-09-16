@@ -463,6 +463,8 @@ void __attribute__((section(".oc_mem.il.text"))) __set_cram_bank(struct gb_s *gb
 
 	gb->memory_map[0xA] = cram;
 	gb->memory_map[0xB] = gb->memory_map[0xA] + 0x1000;
+	Debug_SetCursorPosition(0,0);
+	  Debug_PrintString("REACHED 1", false);
 }
 
 void __attribute__((section(".oc_mem.il.text"))) __gb_dma(struct gb_s *gb, uint16_t addr)
