@@ -28,7 +28,8 @@ jobs:
           make
           echo "dev" | sudo -S apt-get install zip --yes
           rm -rf dist/CPBoy.elf
-          zip -r CPBoy.zip dist/*
+          mv dist CPBoy
+          zip -r CPBoy.zip CPBoy
           
 
       - name: Create Release
