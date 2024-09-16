@@ -31,7 +31,7 @@
 /* Global arrays in OC-Memory */
 uint8_t gb_wram[WRAM_SIZE];
 uint8_t gb_vram[VRAM_SIZE] __attribute__((section(".oc_mem.x")));
-uint8_t gb_oam[OAM_SIZE] __attribute__((section(".oc_mem.y.dma")));
+uint8_t gb_oam[OAM_SIZE] __attribute__((section(".oc_mem.y.data")));
 uint8_t gb_hram_io[HRAM_IO_SIZE] __attribute__((section(".oc_mem.y.data")));
 
 uint8_t execution_handle_input(struct gb_s *gb)
