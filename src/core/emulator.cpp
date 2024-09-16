@@ -426,8 +426,7 @@ uint8_t run_emulator(struct gb_s *gb, emu_preferences *prefs)
     // Render preview of menu
     fillScreen(0x0000);
     emulation_menu(gb, true);
-	  Debug_SetCursorPosition(0,0);
-	  Debug_PrintString("REACHED", false);
+
     LCD_Refresh();
     
     switch (execute_rom(gb))
@@ -443,6 +442,9 @@ uint8_t run_emulator(struct gb_s *gb, emu_preferences *prefs)
       default:
         break;
     }
+	  	  Debug_SetCursorPosition(0,0);
+	  Debug_PrintString("REACHED", false);
+	  LCD_Refresh();
 
     if (close_rom(gb) != 0)
     {
