@@ -442,8 +442,7 @@ void __attribute__((section(".oc_mem.il.text"))) __set_cram_bank(struct gb_s *gb
 
 		/* This will definitely introduce problems, but lets try it anyway */
 		cram = gb->cart_rtc + (gb->cart_ram_bank - 0x08);
-		Debug_SetCursorPosition(0,3);
-	Debug_PrintString("2", false);
+		
 	}
 	else if(gb->cart_ram && gb->enable_cart_ram)
 	{
@@ -463,6 +462,8 @@ void __attribute__((section(".oc_mem.il.text"))) __set_cram_bank(struct gb_s *gb
 	}
 
 	gb->memory_map[0xA] = cram;
+	Debug_SetCursorPosition(0,3);
+	Debug_PrintString("2", false);
 	gb->memory_map[0xB] = gb->memory_map[0xA] + 0x1000;
 }
 
