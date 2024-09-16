@@ -463,8 +463,6 @@ void __attribute__((section(".oc_mem.il.text"))) __set_cram_bank(struct gb_s *gb
 
 	gb->memory_map[0xA] = cram;
 	gb->memory_map[0xB] = gb->memory_map[0xA] + 0x1000;
-		Debug_SetCursorPosition(0,3);
-	Debug_PrintString("2", false);
 }
 
 void __attribute__((section(".oc_mem.il.text"))) __gb_dma(struct gb_s *gb, uint16_t addr)
@@ -3552,25 +3550,13 @@ void gb_reset(struct gb_s *gb)
 	gb->memory_map[0x1] = gb->memory_map[0x0] + 0x1000;
 	gb->memory_map[0x2] = gb->memory_map[0x0] + 0x2000;
 	gb->memory_map[0x3] = gb->memory_map[0x0] + 0x3000;
-	Debug_SetCursorPosition(0,2);
-	Debug_PrintString("1", false);
-	LCD_Refresh();
 
 	__set_rom_bank(gb);
-	Debug_SetCursorPosition(0,2);
-	Debug_PrintString("2", false);
-	LCD_Refresh();
 	
 	gb->memory_map[0x8] = gb->vram;
 	gb->memory_map[0x9] = gb->memory_map[0x8] + 0x1000;
-	Debug_SetCursorPosition(0,2);
-	Debug_PrintString("3", false);
-	LCD_Refresh();
 	
 	__set_cram_bank(gb);
-	Debug_SetCursorPosition(0,2);
-	Debug_PrintString("4", false);
-	LCD_Refresh();
 
 	gb->memory_map[0xC] = gb->wram;
 	gb->memory_map[0xD] = gb->memory_map[0xC] + 0x1000;
@@ -3579,14 +3565,9 @@ void gb_reset(struct gb_s *gb)
 	gb->memory_map[0xF] = gb->memory_map[0xD];
 
 	/* Use values as though the boot ROM was already executed. */
-	Debug_SetCursorPosition(0,1);
-	Debug_PrintString("R 6.1", false);
-	LCD_Refresh();
 	if(gb->gb_bootrom_read == NULL)
 	{
-		Debug_SetCursorPosition(0,1);
-	Debug_PrintString("R 6.2", false);
-	LCD_Refresh();
+
 		uint8_t hdr_chk;
 		hdr_chk = gb->rom[ROM_HEADER_CHECKSUM_LOC] != 0;
 
@@ -3608,9 +3589,6 @@ void gb_reset(struct gb_s *gb)
 #if PEANUT_FULL_GBC_SUPPORT
 		if(gb->cgb.cgbMode)
 		{
-			Debug_SetCursorPosition(0,1);
-	Debug_PrintString("R 6.3", false);
-	LCD_Refresh();
 			gb->cpu_reg.a = 0x11;
 			gb->cpu_reg.f_bits.z = 1;
 			gb->cpu_reg.f_bits.n = 0;
@@ -3622,13 +3600,7 @@ void gb_reset(struct gb_s *gb)
 			gb->hram_io[IO_DIV] = 0xFF;
 		}
 #endif
-Debug_SetCursorPosition(0,1);
-	Debug_PrintString("R 6.4", false);
-	LCD_Refresh();
 		memset(gb->vram, 0x00, VRAM_SIZE);
-		Debug_SetCursorPosition(0,1);
-	Debug_PrintString("R 6.5", false);
-	LCD_Refresh();
 	}
 	else
 	{
@@ -3665,24 +3637,18 @@ Debug_SetCursorPosition(0,1);
 	gb->hram_io[IO_SCX ] = 0x00;
 	gb->hram_io[IO_LY  ] = 0x00;
 	gb->hram_io[IO_LYC ] = 0x00;
-	Debug_SetCursorPosition(0,1);
-	Debug_PrintString("R 8", false);
-	LCD_Refresh();
+
 	__gb_write(gb, 0xFF47, 0xFC); // BGP
 	__gb_write(gb, 0xFF48, 0xFF); // OBJP0
 	__gb_write(gb, 0xFF49, 0xFF); // OBJP1
-	Debug_SetCursorPosition(0,1);
-	Debug_PrintString("R 9", false);
-	LCD_Refresh();
+
 	gb->hram_io[IO_WY] = 0x00;
 	gb->hram_io[IO_WX] = 0x00;
 	gb->hram_io[IO_IE] = 0x00;
 	gb->hram_io[IO_IF] = 0xE1;
 #if PEANUT_FULL_GBC_SUPPORT
 	/* Initialize some CGB registers */
-	Debug_SetCursorPosition(0,1);
-	Debug_PrintString("R 10", false);
-	LCD_Refresh();
+
 	gb->cgb.doubleSpeed = 0;
 	gb->cgb.doubleSpeedPrep = 0;
 	gb->cgb.wramBank = 1;
@@ -3703,9 +3669,6 @@ Debug_SetCursorPosition(0,1);
 	gb->cgb.dmaSize = 0;
 	gb->cgb.dmaSource = 0;
 	gb->cgb.dmaDest = 0;
-	Debug_SetCursorPosition(0,1);
-	Debug_PrintString("R 11", false);
-	LCD_Refresh();
 #endif
 }
 
@@ -3718,15 +3681,11 @@ enum gb_init_error_e gb_init(struct gb_s *gb,
 					 uint8_t *hram_io,
 					 uint8_t *rom)
 {
-	Debug_SetCursorPosition(0,1);
-	Debug_PrintString("R 1", false);
-	LCD_Refresh();
+
 #if PEANUT_FULL_GBC_SUPPORT
 	const uint16_t cgb_flag = 0x0143;
 #endif
-	Debug_SetCursorPosition(0,1);
-	Debug_PrintString("R 2", false);
-	LCD_Refresh();
+
 	const uint16_t mbc_location = 0x0147;
 	const uint16_t bank_count_location = 0x0148;
 	const uint16_t ram_size_location = 0x0149;
@@ -3787,9 +3746,6 @@ enum gb_init_error_e gb_init(struct gb_s *gb,
 
 	/* Check if cartridge type is supported, and set MBC type. */
 	{
-		Debug_SetCursorPosition(0,1);
-	Debug_PrintString("R 3", false);
-	LCD_Refresh();
 #if PEANUT_FULL_GBC_SUPPORT
 		gb->cgb.cgbMode = (gb->rom[cgb_flag] & 0x80) >> 7;
 #endif
@@ -3799,18 +3755,13 @@ enum gb_init_error_e gb_init(struct gb_s *gb,
 				(gb->mbc = cart_mbc[mbc_value]) == -1)
 			return GB_INIT_CARTRIDGE_UNSUPPORTED;
 		
-	Debug_SetCursorPosition(0,1);
-	Debug_PrintString("R 4", false);
-	LCD_Refresh();
 	}
 
 	gb->cart_ram = cart_ram[gb->rom[mbc_location]];
 	gb->num_rom_banks_mask = num_rom_banks_mask[gb->rom[bank_count_location]] - 1;
 	gb->num_ram_banks = num_ram_banks[gb->rom[ram_size_location]];
 	
-	Debug_SetCursorPosition(0,1);
-	Debug_PrintString("R 5", false);
-	LCD_Refresh();
+
 
 	/* Note that MBC2 will appear to have no RAM banks, but it actually
 	 * always has 512 half-bytes of RAM. Hence, gb->num_ram_banks must be
@@ -3819,15 +3770,11 @@ enum gb_init_error_e gb_init(struct gb_s *gb,
 	gb->lcd_blank = 0;
 	gb->display.lcd_draw_line = NULL;
 	
-	Debug_SetCursorPosition(0,1);
-	Debug_PrintString("R 6", false);
-	LCD_Refresh();
+
 
 	gb_reset(gb);
 
-	Debug_SetCursorPosition(0,1);
-	Debug_PrintString("R 7", false);
-	LCD_Refresh();
+
 
 	return GB_INIT_NO_ERROR;
 }
