@@ -340,18 +340,10 @@ uint8_t close_rom(struct gb_s *gb)
 
 uint8_t execute_rom(struct gb_s *gb) 
 {
-	Debug_SetCursorPosition(0,0);
-	  Debug_PrintString("REACHED -1", false);
-	  LCD_Refresh();
-  emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
-	Debug_SetCursorPosition(0,0);
-	  Debug_PrintString("REACHED 0", false);
-	  LCD_Refresh();
-  frametime_counter_set(gb);
-	Debug_SetCursorPosition(0,0);
-	  Debug_PrintString("REACHED 1", false);
-	  LCD_Refresh();
 
+  emu_preferences *preferences = (emu_preferences *)gb->direct.priv;
+
+  frametime_counter_set(gb);
   for (;;)
   {
     frametime_counter_start();
@@ -360,9 +352,7 @@ uint8_t execute_rom(struct gb_s *gb)
     if (unlikely(gb->display.frame_count % 24 == 0))
     {
 	    
-	Debug_SetCursorPosition(0,0);
-	  Debug_PrintString("REACHED 2", false);
-	  LCD_Refresh();
+
       gb_tick_rtc(gb);
     }
 
@@ -371,14 +361,8 @@ uint8_t execute_rom(struct gb_s *gb)
 
     // Run CPU until next frame
 	  
-	Debug_SetCursorPosition(0,0);
-	  Debug_PrintString("REACHED 3", false);
-	  LCD_Refresh();
     gb_run_frame(gb);
 	  
-	Debug_SetCursorPosition(0,0);
-	  Debug_PrintString("REACHED 4", false);
-	  LCD_Refresh();
 
     set_stack_ptr(tmp_stack_ptr_bak);
 
@@ -436,12 +420,20 @@ uint8_t run_emulator(struct gb_s *gb, emu_preferences *prefs)
     {
       return 1;
     }
-	  
+	  	Debug_SetCursorPosition(0,0);
+	  Debug_PrintString("REACHED -1", false);
+	  LCD_Refresh();
 
     if (prepare_emulator(gb, prefs) != 0)
     {
+	    	Debug_SetCursorPosition(0,0);
+	  Debug_PrintString("REACHED 0", false);
+	  LCD_Refresh();
       return 1;
     }   
+	  	Debug_SetCursorPosition(0,0);
+	  Debug_PrintString("REACHED 1", false);
+	  LCD_Refresh();
 	  
     
     // Render preview of menu
