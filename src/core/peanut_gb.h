@@ -462,8 +462,7 @@ void __attribute__((section(".oc_mem.il.text"))) __set_cram_bank(struct gb_s *gb
 	}
 
 	gb->memory_map[0xA] = cram;
-	Debug_SetCursorPosition(0,0);
-	  Debug_PrintString("REACHED 1", false);
+
 	gb->memory_map[0xB] = gb->memory_map[0xA] + 0x1000;
 	
 }
@@ -3558,15 +3557,9 @@ void gb_reset(struct gb_s *gb)
 	
 	gb->memory_map[0x8] = gb->vram;
 	gb->memory_map[0x9] = gb->memory_map[0x8] + 0x1000;
-	Debug_SetCursorPosition(0,0);
-	  Debug_PrintString("REACHED  4", false);
-	  LCD_Refresh();
 	
 	__set_cram_bank(gb);
 
-	Debug_SetCursorPosition(0,0);
-	  Debug_PrintString("REACHED  5", false);
-	  LCD_Refresh();
 
 	gb->memory_map[0xC] = gb->wram;
 	gb->memory_map[0xD] = gb->memory_map[0xC] + 0x1000;
