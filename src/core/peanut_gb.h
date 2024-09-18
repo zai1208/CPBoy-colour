@@ -593,8 +593,8 @@ uint8_t __attribute__((section(".oc_mem.il.text"))) __gb_read(struct gb_s *gb, u
 	if(gb->cgb.cgbMode && addr >= WRAM_1_ADDR)
 		return gb->wram[addr - gb->cgb.wramBankOffset];
 #endif
+	
 	}
-
 normal_read:
 	return gb->memory_map[PEANUT_GB_GET_MSN16(addr)][addr & 0xFFF];
 }
