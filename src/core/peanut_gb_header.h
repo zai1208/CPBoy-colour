@@ -99,7 +99,7 @@
 #endif
 
 #ifndef PEANUT_FULL_GBC_SUPPORT
-# define PEANUT_FULL_GBC_SUPPORT 0
+# define PEANUT_FULL_GBC_SUPPORT 1
 #endif
 
 /* Only include function prototypes. At least one file must *not* have this
