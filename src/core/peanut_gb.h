@@ -116,7 +116,7 @@
 /* Memory section sizes for DMG */
 #if PEANUT_FULL_GBC_SUPPORT
 #define WRAM_SIZE	0x8000
-#define VRAM_SIZE	0x2000
+#define VRAM_SIZE	0x4000
 #else
 #define WRAM_SIZE	0x2000
 #define VRAM_SIZE	0x2000
